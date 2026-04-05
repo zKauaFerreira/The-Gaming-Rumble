@@ -3,11 +3,70 @@ use std::process::{Command, Stdio};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 use sevenz_rust::{decompress_file_with_password, Password};
-use tauri::{AppHandle, Emitter, Manager};
+use std::sync::Mutex;
+use tauri::{AppHandle, Emitter};
 
 use super::logger::{LogLevel, log_tag};
 
 const PASSWORD: &str = "online-fix.me";
+
+static SEVENZ_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+fn find_system_7z() -> Option<PathBuf> {
+    for c in &["C:\\Program Files\\7-Zip\\7z.exe", "C:\\Program Files (x86)\\7-Zip\\7z.exe"] {
+        let p = PathBuf::from(c);
+        if p.exists() { return Some(p); }
+    }
+    None
+}
+
+fn try_7z_from_zip() -> Option<PathBuf> {
+    let sevenz = dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("C:\\Users\\Administrator\\AppData\\Local"))
+        .join("GamingRumble\\bin/7z.exe");
+    sevenz.exists().then_some(sevenz)
+}
+
+async fn ensure_7z() -> Option<PathBuf> {
+    let cached = SEVENZ_PATH.lock().unwrap().clone();
+    if let Some(ref p) = cached { if p.exists() { return cached; } }
+    drop(cached);
+
+    if let Some(p) = find_system_7z().or_else(try_7z_from_zip) {
+        *SEVENZ_PATH.lock().unwrap() = Some(p.clone());
+        return Some(p);
+    }
+
+    #[cfg(target_os = "windows")]
+    if let Some(sevenz) = download_7z().await {
+        *SEVENZ_PATH.lock().unwrap() = Some(sevenz.clone());
+        return Some(sevenz);
+    }
+
+    None
+}
+
+#[cfg(target_os = "windows")]
+async fn download_7z() -> Option<PathBuf> {
+    let client = reqwest::Client::new();
+    let resp = client.get("https://api.github.com/repos/ip7z/7zip/releases/latest")
+        .header("User-Agent", "GamingRumble-Launcher")
+        .send().await.ok()?;
+    let json: serde_json::Value = resp.json().await.ok()?;
+    let tag = json.get("tag_name")?.as_str()?;
+    std::fs::create_dir_all(&app_data).ok()?;
+
+    // 26.00 → 7z2600-x64.exe
+    let tag_no_dot = tag.replace('.', "");
+    let archive_name = format!("7z{}-x64.exe", tag_no_dot);
+    let dl_url = format!("https://github.com/ip7z/7zip/releases/download/{}/{}", tag, archive_name);
+    log_tag(LogLevel::INFO, "EXTRACT", format!("Baixando 7-Zip {} ...", tag));
+    let resp = client.get(&dl_url).send().await.ok()?;
+    let bytes = resp.bytes().await.ok()?;
+    let sevenz_path = app_data.join("7z.exe");
+    std::fs::write(&sevenz_path, &bytes).ok()?;
+    Some(sevenz_path)
+}
 
 #[tauri::command]
 pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), String> {
@@ -53,7 +112,7 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
         let file_name = archive.file_name().unwrap_or_default().to_string_lossy().to_string();
         log_tag(LogLevel::INFO, "EXTRACT", format!("[{}/{}] Jogo: {}", i + 1, total_jobs, file_name));
         run_extract_with_progress(archive, game_extract_dir, &app,
-            pct_start, pct_end, i + 1, total_jobs, "extracting", &file_name)?;
+            pct_start, pct_end, i + 1, total_jobs, "extracting", &file_name).await?;
     }
 
     // 4. Save fix archive to temp (preserve while we delete Fix Repair dir)
@@ -100,7 +159,7 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
         let file_name = format!("fix_{}.rar", i);
         log_tag(LogLevel::INFO, "EXTRACT", format!("[{}/{}] Fix: {:?}", idx + 1, total_jobs, fix_tmp_path));
         run_extract_with_progress(fix_tmp_path, &game_dir, &app,
-            pct_start, pct_end, idx + 1, total_jobs, "extracting_fix", &file_name)?;
+            pct_start, pct_end, idx + 1, total_jobs, "extracting_fix", &file_name).await?;
     }
 
     // 8. Move everything from deepest nested dir to root
@@ -127,43 +186,35 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
     Ok(())
 }
 
-/// Try bundled 7z.exe first, fallback to sevenz-rust if unavailable
-fn extract_rust_or_7z(app: &AppHandle, archive: &Path, out_dir: &str) -> Result<(), String> {
-    // Resolve bundled 7z.exe (tries Resource dir, then dev resources/ fallback)
-    let sevenz_path = app.path()
-        .resolve("bin/7z.exe", tauri::path::BaseDirectory::Resource)
-        .ok()
-        .filter(|p| p.exists());
+/// Try system 7z first, fallback to sevenz-rust
+async fn extract_rust_or_7z(archive: &Path, out_dir: &str) -> Result<(), String> {
+    if let Some(sevenz) = ensure_7z().await {
+        log_tag(LogLevel::SUCCESS, "EXTRACT", format!("Usando 7-Zip para {}",
+            archive.file_name().unwrap_or_default().to_string_lossy()));
 
-    if let Some(sevenz) = sevenz_path {
-        eprintln!("[archive.rs] 7z.exe found at: {:?}", sevenz);
-        log_tag(LogLevel::SUCCESS, "EXTRACT", format!("Usando 7-Zip (bundled) para {}", archive.file_name().unwrap_or_default().to_string_lossy()));
-        let status = Command::new(&sevenz)
+        let output = Command::new(&sevenz)
             .args(&["x", &archive.to_string_lossy(), &format!("-o{}", out_dir), &format!("-p{}", PASSWORD), "-y"])
             .creation_flags(0x08000000)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .status()
-            .map_err(|e: std::io::Error| e.to_string())?;
+            .output();
 
-        eprintln!("[archive.rs] 7z exit code: {}", status);
-        if status.success() {
-            return Ok(());
+        if let Ok(out) = output {
+            if out.status.success() {
+                return Ok(());
+            }
+            log_tag(LogLevel::INFO, "EXTRACT", format!("7-Zip falhou (exit {}), tentando sevenz-rust", out.status.code().unwrap_or(-1)));
         }
-        log_tag(LogLevel::INFO, "EXTRACT", format!("7-Zip falhou (exit {}), tentando sevenz-rust", status.code().unwrap_or(-1)));
-    } else {
-        eprintln!("[archive.rs] 7z.exe NOT found via resolve, trying dev fallback");
     }
 
-    // Fallback to pure Rust
     decompress_file_with_password(archive, out_dir, Password::from(PASSWORD))
         .map_err(|e| format!("Falha ao extrair {} (erro: {})", archive.file_name().unwrap_or_default().to_string_lossy(), e))?;
 
     Ok(())
 }
 
-/// Extract archive using sevenz-rust with 7-Zip fallback
-fn run_extract_with_progress(
+/// Extract archive using system 7z with sevenz-rust fallback
+async fn run_extract_with_progress(
     archive: &Path, out_dir: &Path,
     app: &AppHandle, pct_start: f64, pct_end: f64,
     current: usize, total: usize, label: &str, file_name: &str,
@@ -178,7 +229,8 @@ fn run_extract_with_progress(
 
     std::fs::create_dir_all(out_dir).map_err(|e| e.to_string())?;
 
-    extract_rust_or_7z(app, archive, &out_dir.to_string_lossy())
+    extract_rust_or_7z(archive, &out_dir.to_string_lossy())
+        .await
         .map_err(|e| format!("Falha ao extrair {} (erro: {})", file_name, e))?;
 
     let _ = app.emit("extract-progress", serde_json::json!({

@@ -30,7 +30,6 @@ fn register_deep_link() {
     ];
 
     for args in commands {
-        // Use `update` (silent) or `add` with /f
         let _ = Command::new("cmd")
             .args(&["/C", "reg"].iter().chain(args.iter()).map(|s| s.as_ref()).collect::<Vec<&str>>())
             .creation_flags(0x08000000)
@@ -84,7 +83,6 @@ pub fn run() {
             remove_shortcut
         ])
         .setup(|_app| {
-            eprintln!("[DEEP-LINK] Protocol registration confirmed.");
             Ok(())
         })
         .run(tauri::generate_context!())

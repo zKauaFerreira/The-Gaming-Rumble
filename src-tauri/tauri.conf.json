@@ -35,8 +35,7 @@
     "active": true,
     "targets": "all",
     "resources": {
-      "resources/bin/aria2c.exe": "bin/aria2c.exe",
-      "resources/bin/7z.exe": "bin/7z.exe"
+      "resources/bin/aria2c.exe": "bin/aria2c.exe"
     },
     "icon": [
       "icons/32x32.png",
