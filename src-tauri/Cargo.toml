@@ -23,4 +23,4 @@ sysinfo = "0.33"
 reqwest = { version = "0.12", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 zip = "2.1"
-sevenz-rust = "0.6"
+sevenz-rust = { version = "0.6", features = ["aes256"] }

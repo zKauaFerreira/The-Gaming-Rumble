@@ -31,7 +31,7 @@ function parseSizeGB(str: string): number {
   return match ? parseFloat(match[1]) : 0;
 }
 
-export function SetupView({ payload, defaultDrive, onStart }: SetupViewProps) {
+export function SetupView({ payload, defaultDrive, onStart, onDownloadFixOnly }: SetupViewProps & { onDownloadFixOnly?: (path: string) => void }) {
   const [path, setPath] = useState(`${defaultDrive}Gaming Rumble\\${payload.title}`);
   const [diskFree, setDiskFree] = useState("...");
 
@@ -122,6 +122,11 @@ export function SetupView({ payload, defaultDrive, onStart }: SetupViewProps) {
 
         <button
           onClick={() => hasSpace && onStart(path)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            if (hasSpace && onDownloadFixOnly) onDownloadFixOnly(path);
+          }}
+          title={onDownloadFixOnly ? "Esquerdo: Baixar + Extrair | Direito: Baixar Fix e abrir pasta" : ""}
           disabled={!hasSpace}
           className={cn(
             "w-full h-20 font-black rounded-3xl flex items-center justify-center gap-4 group mt-auto mb-6 transition-all tracking-[0.2em] text-xl italic",

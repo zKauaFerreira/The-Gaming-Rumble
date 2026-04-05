@@ -1,77 +1,25 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader};
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+use sevenz_rust::{decompress_file_with_password, Password};
 use tauri::{AppHandle, Emitter, Manager};
 
-use super::logger::{LogLevel, log, log_tag};
+use super::logger::{LogLevel, log_tag};
 
 const PASSWORD: &str = "online-fix.me";
 
-async fn ensure_7z(app: &AppHandle) -> Result<PathBuf, String> {
-    // 1. Try bundled resources
-    if let Ok(resources) = app.path().resolve("bin/7z.exe", tauri::path::BaseDirectory::Resource) {
-        if resources.exists() { return Ok(resources); }
-    }
-
-    // 2. Fallback: copy to user app_data
-    let app_data = app.path().app_data_dir().unwrap();
-    let bin_dir = app_data.join("bin");
-    let exe7z = bin_dir.join("7z.exe");
-
-    if exe7z.exists() { return Ok(exe7z); }
-
-    // 3. System check
-    let system_check = Command::new("7z")
-        .arg("i")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn();
-    if let Ok(mut child) = system_check {
-        if child.wait().map(|s| s.success()).unwrap_or(false) {
-            return Ok(PathBuf::from("7z.exe"));
-        }
-    }
-
-    log(LogLevel::WARN, "7z não encontrado como recurso, baixando fallback...");
-    // Try known valid 7z versions URLs
-    let urls = [
-        "https://github.com/ip7z/7zip/releases/download/26.00/7z2600-extra.7z",
-        "https://github.com/ip7z/7zip/releases/download/25.00/7z2500-extra.7z",
-    ];
-    std::fs::create_dir_all(&bin_dir).map_err(|e| e.to_string())?;
-    for url in urls {
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(120))
-            .build().map_err(|e| e.to_string())?;
-        let resp = match client.get(url).send().await {
-            Ok(r) if r.status().is_success() => r,
-            _ => continue,
-        };
-        let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
-        let temp_7z = bin_dir.join("7z_temp.7z");
-        std::fs::write(&temp_7z, &bytes).map_err(|e| e.to_string())?;
-        log(LogLevel::INFO, format!("Baixando 7z standalone ({:.1} MB)...", bytes.len() as f64 / 1_048_576.0));
-        let _ = sevenz_rust::decompress_file(&temp_7z, &bin_dir);
-        let _ = std::fs::remove_file(&temp_7z);
-        if exe7z.exists() { return Ok(exe7z); }
-    }
-    Err("Não foi possível obter 7z.exe. Verifique sua conexão ou instale 7-Zip manualmente.".into())
-}
-
 #[tauri::command]
 pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), String> {
-    log_tag(LogLevel::SUCCESS, "EXTRACT", format!("Iniciando extração em {}", install_path));
+    log_tag(LogLevel::SUCCESS, "EXTRACT", format!("Iniciando extracao em {}", install_path));
     let root = Path::new(&install_path);
-
-    let sevenz_path = ensure_7z(&app).await.unwrap_or_else(|_| PathBuf::from("7z.exe"));
-    log_tag(LogLevel::DEBUG, "EXTRACT", format!("7z em: {:?}", sevenz_path));
 
     // 1. Find archives
     let rars = find_files_recursive(root, "rar");
     let zips = find_files_recursive(root, "zip");
     let all_archives: Vec<PathBuf> = rars.into_iter().chain(zips).collect();
     if all_archives.is_empty() {
-        return Err("No archives found in download directory".into());
+        return Err("Nenhum arquivo encontrado no diretorio de download".into());
     }
 
     // 2. Separate game from fix
@@ -91,11 +39,10 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
     game_archives.sort();
     fix_archives.sort();
 
-    // Build list of jobs: game first, fix second
     let total_jobs = game_archives.len() + fix_archives.len();
     log_tag(LogLevel::INFO, "EXTRACT", format!("{} arquivo(s) de jogo e {} fix", game_archives.len(), fix_archives.len()));
 
-    // 3. Extract game archives at the directory where they are
+    // 3. Extract game archives
     let game_extract_dir = game_archives.first()
         .and_then(|a| a.parent())
         .unwrap_or(root);
@@ -105,11 +52,11 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
         let pct_end = ((i + 1) as f64 / total_jobs as f64) * 100.0;
         let file_name = archive.file_name().unwrap_or_default().to_string_lossy().to_string();
         log_tag(LogLevel::INFO, "EXTRACT", format!("[{}/{}] Jogo: {}", i + 1, total_jobs, file_name));
-        run_7z_with_progress(&sevenz_path, archive, game_extract_dir, false, &app,
+        run_extract_with_progress(archive, game_extract_dir, &app,
             pct_start, pct_end, i + 1, total_jobs, "extracting", &file_name)?;
     }
 
-    // 4. Save fix archive to temp (preserve it while we delete Fix Repair dir)
+    // 4. Save fix archive to temp (preserve while we delete Fix Repair dir)
     let fix_tmp_dir = std::env::temp_dir().join("gr_extract_tmp");
     std::fs::create_dir_all(&fix_tmp_dir).map_err(|e| e.to_string())?;
     let mut fix_tmp_paths: Vec<PathBuf> = Vec::new();
@@ -117,7 +64,7 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
     for (i, fix_archive) in fix_archives.iter().enumerate() {
         let dest = fix_tmp_dir.join(format!("fix_{}.rar", i));
         std::fs::copy(fix_archive, &dest)
-            .map_err(|e| format!("Não foi possível copiar o fix: {}", e))?;
+            .map_err(|e| format!("Nao foi possivel copiar o fix: {}", e))?;
         log_tag(LogLevel::DEBUG, "EXTRACT", format!("Fix copiado para temp: {:?}", dest));
         fix_tmp_paths.push(dest);
     }
@@ -137,7 +84,7 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
         }
     }
 
-    // 5. Flatten duplicate nested dirs (A\A → A)
+    // 5. Flatten duplicate nested dirs
     log_tag(LogLevel::INFO, "EXTRACT", "Aplicando flattening...");
     while flatten_one_pass(root) > 0 {}
 
@@ -152,14 +99,14 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
         let pct_end = ((idx + 1) as f64 / total_jobs as f64) * 100.0;
         let file_name = format!("fix_{}.rar", i);
         log_tag(LogLevel::INFO, "EXTRACT", format!("[{}/{}] Fix: {:?}", idx + 1, total_jobs, fix_tmp_path));
-        run_7z_with_progress(&sevenz_path, fix_tmp_path, &game_dir, true, &app,
+        run_extract_with_progress(fix_tmp_path, &game_dir, &app,
             pct_start, pct_end, idx + 1, total_jobs, "extracting_fix", &file_name)?;
     }
 
     // 8. Move everything from deepest nested dir to root
     let deepest = find_deepest_same_name_dir(root);
     if deepest != root && deepest.exists() {
-        log_tag(LogLevel::INFO, "EXTRACT", format!("Movendo conteúdo de {:?} para raiz", deepest));
+        log_tag(LogLevel::INFO, "EXTRACT", format!("Movendo conteudo de {:?} para raiz", deepest));
         move_all_to(&deepest, root);
         while flatten_one_pass(root) > 0 {}
     }
@@ -175,13 +122,73 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
     clean_archives(root);
     remove_empty_dirs(root);
 
-    log_tag(LogLevel::SUCCESS, "EXTRACT", "Extração completa!");
+    log_tag(LogLevel::SUCCESS, "EXTRACT", "Extracao completa!");
     let _ = app.emit("extract-progress", serde_json::json!({"type": "done"}));
     Ok(())
 }
 
+/// Try bundled 7z.exe first, fallback to sevenz-rust if unavailable
+fn extract_rust_or_7z(app: &AppHandle, archive: &Path, out_dir: &str) -> Result<(), String> {
+    // Resolve bundled 7z.exe
+    let sevenz_path = app.path()
+        .resolve("bin/7z.exe", tauri::path::BaseDirectory::Resource)
+        .ok()
+        .filter(|p| p.exists());
+
+    if let Some(sevenz) = sevenz_path {
+        log_tag(LogLevel::SUCCESS, "EXTRACT", format!("Usando 7-Zip (bundled) para {}", archive.file_name().unwrap_or_default().to_string_lossy()));
+        let status = Command::new(&sevenz)
+            .args(&["x", &archive.to_string_lossy(), &format!("-o{}", out_dir), &format!("-p{}", PASSWORD), "-y"])
+            .creation_flags(0x08000000)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map_err(|e: std::io::Error| e.to_string())?;
+
+        if status.success() {
+            return Ok(());
+        }
+        log_tag(LogLevel::INFO, "EXTRACT", format!("7-Zip falhou, tentando sevenz-rust"));
+    }
+
+    // Fallback to pure Rust
+    decompress_file_with_password(archive, out_dir, Password::from(PASSWORD))
+        .map_err(|e| format!("Falha ao extrair {} (erro: {})", archive.file_name().unwrap_or_default().to_string_lossy(), e))?;
+
+    Ok(())
+}
+
+/// Extract archive using sevenz-rust with 7-Zip fallback
+fn run_extract_with_progress(
+    archive: &Path, out_dir: &Path,
+    app: &AppHandle, pct_start: f64, pct_end: f64,
+    current: usize, total: usize, label: &str, file_name: &str,
+) -> Result<(), String> {
+    let _ = app.emit("extract-progress", serde_json::json!({
+        "type": label,
+        "file": file_name,
+        "current": current,
+        "total": total,
+        "global_pct": format!("{:.1}", pct_start)
+    }));
+
+    std::fs::create_dir_all(out_dir).map_err(|e| e.to_string())?;
+
+    extract_rust_or_7z(app, archive, &out_dir.to_string_lossy())
+        .map_err(|e| format!("Falha ao extrair {} (erro: {})", file_name, e))?;
+
+    let _ = app.emit("extract-progress", serde_json::json!({
+        "type": label,
+        "file": file_name,
+        "current": current,
+        "total": total,
+        "global_pct": format!("{:.1}", pct_end)
+    }));
+
+    Ok(())
+}
+
 /// Walk down a chain of nested dirs where subdir name matches parent name.
-/// root\Chained Wheels\Chained Wheels\Chained Wheels → returns deepest.
 fn find_deepest_same_name_dir(start: &Path) -> PathBuf {
     let mut current = start.to_path_buf();
     loop {
@@ -206,80 +213,10 @@ fn find_deepest_same_name_dir(start: &Path) -> PathBuf {
     current
 }
 
-
-/// Returns 0 if no progress found
-fn extract_pct_from_7z_line(line: &str) -> Option<f64> {
-    for token in line.split_whitespace() {
-        if let Some(num) = token.strip_suffix('%') {
-            if let Ok(v) = num.parse::<f64>() {
-                if v >= 0.0 && v <= 100.0 {
-                    return Some(v);
-                }
-            }
-        }
-    }
-    None
-}
-
-/// Run 7z with real-time progress from stdout
-fn run_7z_with_progress(
-    sevenz_exe: &Path, archive: &Path, out_dir: &Path, overwrite: bool,
-    app: &AppHandle, pct_start: f64, pct_end: f64,
-    current: usize, total: usize, label: &str, file_name: &str,
-) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    use std::os::windows::process::CommandExt;
-
-    let mut cmd = Command::new(sevenz_exe);
-    cmd.arg("x");
-    cmd.arg(archive);
-    cmd.arg(format!("-o{}", out_dir.display()));
-    cmd.arg("-y");
-    cmd.arg(format!("-p{}", PASSWORD));
-    if overwrite { cmd.arg("-aoa"); }
-    #[cfg(target_os = "windows")]
-    cmd.creation_flags(0x08000000);
-    cmd.stdout(Stdio::piped());
-    cmd.stderr(Stdio::piped());
-
-    let mut child = cmd.spawn().map_err(|e| {
-        if e.kind() == std::io::ErrorKind::NotFound {
-            format!("7z.exe não encontrado! Erro: {}", e)
-        } else { e.to_string() }
-    })?;
-
-    let stdout = child.stdout.take();
-    if let Some(stdout) = stdout {
-        let reader = BufReader::new(stdout);
-        for line in reader.lines().flatten() {
-            if let Some(pct) = extract_pct_from_7z_line(&line) {
-                let global = pct_start + pct * (pct_end - pct_start) / 100.0;
-                let _ = app.emit("extract-progress", serde_json::json!({
-                    "type": label,
-                    "file": file_name,
-                    "current": current,
-                    "total": total,
-                    "global_pct": format!("{:.1}", global)
-                }));
-            }
-        }
-    }
-
-    let status = child.wait().map_err(|e| e.to_string())?;
-    if !status.success() {
-        return Err(format!("Falha ao extrair {} (código {})",
-            archive.file_name().unwrap_or_default().to_string_lossy(),
-            status.code().unwrap_or(-1)));
-    }
-    Ok(())
-}
-
 /// Top-down flatten: for each dir, if it has only 1 subdir with the SAME name
 /// and no files at this level, merge the subdir up. Returns count flattened.
 fn flatten_one_pass(root: &Path) -> usize {
     let mut count = 0;
-
-    // Collect all dirs breadth-first
     let mut to_visit = vec![root.to_path_buf()];
     while let Some(dir) = to_visit.pop() {
         if let Ok(entries) = std::fs::read_dir(&dir) {
@@ -290,7 +227,6 @@ fn flatten_one_pass(root: &Path) -> usize {
             }
         }
     }
-    // Process top-down (shorter paths first)
     to_visit.sort_by_key(|p| p.components().count());
 
     for dir in to_visit {
@@ -306,7 +242,6 @@ fn flatten_one_pass(root: &Path) -> usize {
             let inner_name = inner.file_name();
             let dir_name = dir.file_name();
             let should_flatten = dir_name == inner_name
-                // Also flatten if subdir is the only option left
                 || (dirs.len() == 1 && !has_files && !dir.as_os_str().is_empty());
 
             if should_flatten {
@@ -341,7 +276,6 @@ fn merge_to_parent(inner: &Path) {
     }
     let _ = std::fs::remove_dir_all(inner);
 }
-
 
 fn merge_dirs(src: &Path, dst: &Path) {
     if let Ok(entries) = std::fs::read_dir(src) {
@@ -475,28 +409,20 @@ pub struct InstallationMetadata {
 }
 
 /// Score how well an EXE filename matches keywords from the game title.
-/// Higher = better match (full match > partial word match > partial char match).
 fn title_match_score(exe_stem: &str, title_words: &[&str]) -> i32 {
     let exe_lower = exe_stem.to_lowercase();
     let mut score = 0;
-
     for word in title_words {
         let w = word.to_lowercase();
-        if w.len() < 3 { continue; } // skip short words like "of", "the", "vs"
-        // Exact match (highest priority)
+        if w.len() < 3 { continue; }
         if exe_lower == w {
             score += 100;
-        }
-        // Word contained in exe name (case-insensitive)
-        else if exe_lower.contains(&w) {
+        } else if exe_lower.contains(&w) {
             score += 50;
-        }
-        // Partial match with at least 3 char substring
-        else if w.len() >= 5 && w.split_whitespace().next().map(|s| exe_lower.contains(&s.to_lowercase())).unwrap_or(false) {
+        } else if w.len() >= 5 && w.split_whitespace().next().map(|s| exe_lower.contains(&s.to_lowercase())).unwrap_or(false) {
             score += 25;
         }
     }
-
     score
 }
 
@@ -508,19 +434,13 @@ pub fn finalize_installation(install_path: String, title: Option<String>) -> Res
     let size_gb = size_bytes as f64 / 1_073_741_824.0;
 
     let exes = find_files_recursive(root, "exe");
-    // Ignored EXEs: redistributables, installers, crash handlers, debug tools
     let ignored = [
         "unins000", "crashreport", "crashhandler", "unitycrashhandler", "unityplayer",
-        "dxsetup", "vcredist", "dotnet", "redist", "setup", "installer",
-        "repair", "patch", "update", "launcher", "prereq", "cefprocess",
+        "dxsetup", "vcredist", "dotnet", "redist", "setup", "launcher", "prereq", "cefprocess",
         "shadercache", "mono", "unity"
     ];
-
-    // Short words to ignore in title matching
     let skip_words = ["the", "of", "and", "or", "a", "an", "in", "on", "to", "vs",
                       "do", "da", "e", "em", "de", "para", "com", "por", "sem", "que", "na", "no", "nos", "das", "dos", "se", "seu", "sua", "ele", "ela"];
-
-    // Extract title keywords (non-short, non-skip words, replacing & => and, - => space)
     let safe_title = title.unwrap_or_default()
         .replace('&', " ")
         .replace('-', " ")
@@ -536,28 +456,18 @@ pub fn finalize_installation(install_path: String, title: Option<String>) -> Res
     for exe in &exes {
         let name = exe.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
         let stem = exe.file_stem().unwrap_or_default().to_string_lossy();
-
-        // Skip known non-game exes
         if ignored.iter().any(|&i| name.contains(i)) { continue; }
-        // Skip if exe is tiny (< 100KB) — likely a helper, not the main game
         if let Ok(meta) = exe.metadata() {
             if meta.len() < 100_000 { continue; }
         }
-
         let depth = exe.components().count() as i32;
         let mut score = 100 - depth * 10;
-
-        // Title keyword matching bonus
         if !title_words.is_empty() {
-            let match_score = title_match_score(&stem, &title_words);
-            score += match_score;
+            score += title_match_score(&stem, &title_words);
         }
-
-        // Bonus if parent dir has game indicators
         if let Some(parent) = exe.parent() {
             score += dir_game_bonus(parent);
         }
-
         if score > best_score {
             best_score = score;
             best_exe = exe.to_string_lossy().into_owned();
@@ -565,7 +475,7 @@ pub fn finalize_installation(install_path: String, title: Option<String>) -> Res
     }
 
     if best_exe.is_empty() {
-        log_tag(LogLevel::WARN, "EXE", "Nenhum executável encontrado");
+        log_tag(LogLevel::WARN, "EXE", "Nenhum executavel encontrado");
     } else {
         log_tag(LogLevel::SUCCESS, "EXE", format!("{} (score: {})", best_exe, best_score));
     }

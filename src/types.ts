@@ -48,6 +48,7 @@ export interface DownloadState {
   isPaused: boolean;
   peers: number;
   seeds: number;
+  fixOnly: boolean;
 }
 
 export interface LogEntry {

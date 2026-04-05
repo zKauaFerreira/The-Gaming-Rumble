@@ -67,12 +67,11 @@ export function LibraryView({ defaultDrive }: { defaultDrive: string }) {
   }
 
   if (games.length === 0) return (
-    <div className="flex-1 flex flex-col items-center justify-center opacity-20 uppercase font-black tracking-[0.5em] text-xs gap-4 -mt-10 border-4 border-dashed border-white/10 m-12 rounded-[3rem]">
-      <Icon name="sports_esports" size={64} className="mb-4" />
-      Hangar Vazio
-      <span className="text-[10px] tracking-widest font-mono text-center max-w-xs mt-2 opacity-60">
-        Seu arsenal está limpo. Colete links magnéticos ou adicione títulos via web.
-      </span>
+    <div className="flex-1 flex items-center justify-center bg-[#0e0e10]">
+      <div className="flex flex-col items-center gap-4">
+        <Icon name="sports_esports" size={64} className="text-slate-600" />
+        <span className="text-sm text-slate-500 tracking-widest font-medium uppercase">Nenhum Jogo Baixado</span>
+      </div>
     </div>
   );
 

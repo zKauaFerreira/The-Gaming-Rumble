@@ -18,15 +18,13 @@ interface ActivityViewProps {
 
 export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }: ActivityViewProps) {
   if (!state) return (
-    <div className="absolute inset-0 flex items-center justify-center bg-[#0e0e10]">
-      <div className="flex flex-col items-center gap-4">
-        <Icon name="hourglass_empty" size={64} className="text-slate-600" />
-        <span className="text-sm text-slate-500 tracking-widest font-medium uppercase">Nenhum Download em Andamento</span>
-      </div>
+    <div className="flex flex-col items-center gap-4">
+      <Icon name="hourglass_empty" size={64} className="text-slate-600" />
+      <span className="text-sm text-slate-500 tracking-widest font-medium uppercase">Nenhum Download em Andamento</span>
     </div>
   );
 
-  const { payload, progressPercent, speedMBs, eta, elapsedTime, phase, peers, seeds } = state;
+  const { payload, progressPercent, speedMBs, eta, elapsedTime, phase, peers, seeds, fixOnly } = state;
   const isDone = phase === "done";
   const isExtracting = phase === "extracting";
   const isError = phase === "error";
@@ -41,7 +39,7 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
           <div className="flex items-center gap-2 mb-2">
             <div className={cn("w-1.5 h-1.5 rounded-full", isDone ? "bg-[#4ade80]" : "bg-[#a4e6ff] animate-pulse")} />
             <span className="text-[9px] tracking-[0.4em] text-[#a4e6ff] font-mono">
-              {isDone ? "PROTOCOLO FINALIZADO" : isExtracting ? "REESTRUTURANDO NÚCLEO" : "TRANSMISSÃO ATIVA"}
+              {isDone ? "PROTOCOLO FINALIZADO" : isExtracting ? "REESTRUTURANDO NÚCLEO" : fixOnly ? "TRANSMISSÃO ATIVA (FIX)" : "TRANSMISSÃO ATIVA"}
             </span>
           </div>
           <h1 className="text-4xl font-black tracking-tighter text-[#e5e1e4] leading-none truncate">{payload.title}</h1>
@@ -116,9 +114,13 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
         )}
 
         {isDone && onStartGame && (
-          <button onClick={onStartGame} className="mt-auto mb-4 h-20 bg-gradient-to-br from-[#4ade80] to-[#22c55e] text-[#002d13] font-black rounded-3xl shadow-[0_15px_40px_rgba(74,222,128,0.15)] flex items-center justify-center gap-4 group">
-             <span className="tracking-[0.2em] text-xl italic">INICIAR JOGO</span>
-             <Icon name="play_arrow" size={32} fill={1} />
+          <button onClick={onStartGame} className={cn("mt-auto mb-4 h-20 font-black rounded-3xl shadow-[0_15px_40px_rgba(74,222,128,0.15)] flex items-center justify-center gap-4 group italic",
+            fixOnly
+              ? "bg-gradient-to-br from-[#a4e6ff] to-[#0188ca] text-[#002d38]"
+              : "bg-gradient-to-br from-[#4ade80] to-[#22c55e] text-[#002d13]"
+          )}>
+             <span className="tracking-[0.2em] text-xl">{fixOnly ? "ABRIR PASTA" : "INICIAR JOGO"}</span>
+             <Icon name={fixOnly ? "folder_open" : "play_arrow"} size={32} fill={1} />
           </button>
         )}
       </div>

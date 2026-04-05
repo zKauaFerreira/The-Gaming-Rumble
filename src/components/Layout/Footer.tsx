@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 
 interface FooterProps {
   installPath?: string;
@@ -9,6 +10,11 @@ interface FooterProps {
 export function Footer({ installPath, defaultDrive }: FooterProps) {
   const [diskFree, setDiskFree] = useState("");
   const [drive, setDrive] = useState("");
+  const [version, setVersion] = useState("");
+
+  useEffect(() => {
+    getVersion().then(v => setVersion(v)).catch(() => {});
+  }, []);
 
   const targetPath = installPath || defaultDrive || "";
 
@@ -28,7 +34,7 @@ export function Footer({ installPath, defaultDrive }: FooterProps) {
   return (
     <footer className="h-10 px-8 border-t border-white/5 bg-[#131315]/70 flex items-center justify-between text-[9px] uppercase font-black opacity-50 tracking-[0.6em] z-30">
       <span>{drive}{diskFree ? ` ${diskFree} livre` : ""}</span>
-      <span>v1.0.0</span>
+      <span>{version ? `v${version}` : ""}</span>
     </footer>
   );
 }

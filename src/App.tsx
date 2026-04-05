@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { invoke } from "@tauri-apps/api/core";
-import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
+
 import { listen } from "@tauri-apps/api/event";
 
 // Components
@@ -54,22 +54,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Effect: Poll for download file completion (works even after HMR reload without aria2 logs)
-  useEffect(() => {
-    if (downloadState?.phase !== "downloading") return;
-    const interval = setInterval(async () => {
-      try {
-        // If downloadState is at high progress and aria2c is not running anymore, trigger extraction
-        if (downloadState.progressPercent >= 99) {
-          setDownloadState(prev =>
-            prev?.phase === "downloading" ? { ...prev, phase: "extracting" } : prev
-          );
-        }
-      } catch {}
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [downloadState?.phase, downloadState?.progressPercent]);
-
   // Effect: Persist download state to localStorage (survives HMR/reload)
   useEffect(() => {
     if (downloadState) {
@@ -78,35 +62,6 @@ export default function App() {
       localStorage.removeItem(DOWNLOAD_STATE_KEY);
     }
   }, [downloadState]);
-
-  // Effect: Resume interrupted extraction after HMR/reload
-  // If we restored a downloading state, wait for aria2c logs. If no activity
-  // for 15 seconds and progress is already 100%, force extraction.
-  useEffect(() => {
-    if (downloadState?.phase !== "downloading") return;
-
-    let checkTimer: any;
-    const checkProgress = () => {
-      checkTimer = setTimeout(() => {
-        setDownloadState(prev => {
-          if (prev?.phase !== "downloading") return prev;
-          // If progress reached 100%, assume download completed
-          if ((prev.progressPercent || 0) >= 100) {
-            console.log("[APP] Progress at 100%, triggering extraction...");
-            return { ...prev, phase: "extracting" };
-          }
-          return prev;
-        });
-      }, 15000);
-    };
-
-    checkProgress();
-
-    // Cancel timer if downloadState changes (means new logs are coming)
-    return () => {
-      if (checkTimer) clearTimeout(checkTimer);
-    };
-  }, [downloadState?.installPath]); // Only re-attach when installPath changes (new download)
 
   // Effect: Extração Automática (Extract & Destroy)
   useEffect(() => {
@@ -184,12 +139,10 @@ export default function App() {
 
   // Restore aria2c listener when downloadState is restored from storage
   useEffect(() => {
-    const unlisten = onOpenUrl((urls) => { if (urls[0]) processUrl(urls[0]); });
-
-    // Single instance: captura URL da segunda instância
-    const unManual = listen<string[]>("deep-link://new-url", (e) => {
-      const url = e.payload.find(arg => arg.startsWith("gaming-rumble://"));
-      if (url) processUrl(url);
+    // Deep link from Rust backend
+    const unDeep = listen<string>("deeplink", (e) => {
+      console.log("[DEEP-LINK] URI received:", e.payload);
+      processUrl(e.payload);
     });
 
     const unLog = listen<string>("download-log", (e) => {
@@ -249,9 +202,15 @@ export default function App() {
         }
 
         if (log.includes("Seeding is over")) {
-          // Final confirmation that all torrents (including metadata) are done
           newState.progressPercent = 100;
-          newState.phase = "extracting";
+          // If fixOnly mode, skip extraction and open folder
+          if (newState.fixOnly) {
+            newState.phase = "done";
+            invoke("open_path", { path: "", selectFile: newState.installPath })
+              .catch(() => {});
+          } else {
+            newState.phase = "extracting";
+          }
         }
 
         // Detect aria2c failures (timeout, no peers, etc.)
@@ -307,8 +266,7 @@ export default function App() {
     });
 
     return () => {
-      unlisten.then(f => f());
-      unManual.then(f => f());
+      unDeep.then(f => f());
       unLog.then(f => f());
       unExtract.then(f => f());
     };
@@ -319,7 +277,6 @@ export default function App() {
       console.warn("[APP] No activePayload — can't start install");
       return;
     }
-    console.log("[APP] handleStartInstall called! path:", path, "title:", activePayload.title);
     setView("activity");
     setDownloadState({
       payload: activePayload,
@@ -334,7 +291,37 @@ export default function App() {
       logs: [{ time: new Date().toLocaleTimeString(), tag: "INFO", msg: "Transmissão Iniciada." }],
       isPaused: false,
       peers: 0,
-      seeds: 0
+      seeds: 0,
+      fixOnly: false
+    });
+
+    try { await invoke("add_defender_exclusion", { path }); } catch {}
+    try { await invoke("start_torrent", { magnet: activePayload.magnet, installPath: path }); } catch (e: any) {
+      addLog("ERROR", `Falha no Motor: ${e}`);
+    }
+  }
+
+  async function handleDownloadFixOnly(path: string) {
+    if (!activePayload) {
+      console.warn("[APP] No activePayload — can't start fix-only download");
+      return;
+    }
+    setView("activity");
+    setDownloadState({
+      payload: activePayload,
+      installPath: path,
+      phase: "downloading",
+      currentPart: 0,
+      totalParts: activePayload.parts,
+      progressPercent: 0,
+      speedMBs: 0,
+      eta: "0s",
+      elapsedTime: "00:00",
+      logs: [{ time: new Date().toLocaleTimeString(), tag: "INFO", msg: "Baixando apenas Fix... (botão direito)" }],
+      isPaused: false,
+      peers: 0,
+      seeds: 0,
+      fixOnly: true
     });
 
     try {
@@ -342,7 +329,7 @@ export default function App() {
     } catch {}
 
     try {
-      await invoke("start_torrent", { magnet: activePayload.magnet, installPath: path });
+      await invoke("start_fix_download", { magnet: activePayload.magnet, installPath: path });
     } catch (e: any) {
       addLog("ERROR", `Falha no Motor: ${e}`);
     }
@@ -359,11 +346,11 @@ export default function App() {
       <AnimatePresence mode="wait">
         {view === "setup" && activePayload && (
           <motion.div key="setup" className="flex-1" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-             <SetupView payload={activePayload} defaultDrive={defaultDrive} onStart={handleStartInstall} />
+             <SetupView payload={activePayload} defaultDrive={defaultDrive} onStart={handleStartInstall} onDownloadFixOnly={handleDownloadFixOnly} />
           </motion.div>
         )}
         {view === "activity" && (
-          <motion.div key="activity" className="flex-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div key="activity" className="flex-1 flex items-center justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
              <ActivityView
                state={downloadState}
                isPaused={downloadState?.isPaused || false}
@@ -381,7 +368,7 @@ export default function App() {
                }}
                onCancel={async () => {
                  await invoke("stop_torrent");
-                 if (downloadState) {
+                 if (downloadState && !downloadState.fixOnly) {
                    await invoke("delete_folder", { path: downloadState.installPath }).catch(() => {});
                  }
                  setDownloadState(null);

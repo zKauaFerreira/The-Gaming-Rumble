@@ -61,9 +61,9 @@ export function Header({ currentView, onViewChange, onLogoClick }: HeaderProps) 
         {/* Minimize button */}
         <button
           onClick={() => win.minimize()}
-          className="p-3 rounded-2xl text-slate-500 hover:text-[#a4e6ff] hover:bg-white/10 transition-all cursor-pointer"
+          className="p-3 rounded-2xl text-slate-500 hover:text-[#a4e6ff] hover:bg-white/10 transition-all cursor-pointer flex items-center justify-center"
         >
-          <Icon name="minimize" size={20} />
+          <Icon name="remove" size={20} />
         </button>
 
         {/* Close button */}
