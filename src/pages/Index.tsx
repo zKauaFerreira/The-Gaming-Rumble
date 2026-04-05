@@ -137,7 +137,7 @@ const Index = () => {
               </svg>
             </div>
             <p className="text-lg font-medium">Jogo aberto com sucesso!</p>
-            <p className="text-sm text-muted-foreground mt-1">Você já pode fechar esta aba</p>
+            <p className="text-sm text-muted-foreground mt-1">Esta aba será fechada automaticamente...</p>
           </div>
         )}
 
