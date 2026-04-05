@@ -54,18 +54,34 @@ async fn download_7z() -> Option<PathBuf> {
         .send().await.ok()?;
     let json: serde_json::Value = resp.json().await.ok()?;
     let tag = json.get("tag_name")?.as_str()?;
+    let app_data = dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("C:\\Users\\Administrator\\AppData\\Local"))
+        .join("GamingRumble\\bin");
     std::fs::create_dir_all(&app_data).ok()?;
 
-    // 26.00 → 7z2600-x64.exe
     let tag_no_dot = tag.replace('.', "");
     let archive_name = format!("7z{}-x64.exe", tag_no_dot);
     let dl_url = format!("https://github.com/ip7z/7zip/releases/download/{}/{}", tag, archive_name);
     log_tag(LogLevel::INFO, "EXTRACT", format!("Baixando 7-Zip {} ...", tag));
+
+    let temp_exe = app_data.join("7z_installer.exe");
     let resp = client.get(&dl_url).send().await.ok()?;
     let bytes = resp.bytes().await.ok()?;
+    std::fs::write(&temp_exe, &bytes).ok()?;
+
+    // Run silent install to extract 7z.exe
+    let status = Command::new(&temp_exe)
+        .args(["/S", "/D", app_data.to_str()?])
+        .creation_flags(0x08000000)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .ok();
+
+    std::fs::remove_file(&temp_exe).ok()?;
+
     let sevenz_path = app_data.join("7z.exe");
-    std::fs::write(&sevenz_path, &bytes).ok()?;
-    Some(sevenz_path)
+    sevenz_path.exists().then_some(sevenz_path)
 }
 
 #[tauri::command]

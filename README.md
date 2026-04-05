@@ -29,7 +29,7 @@ Gaming Rumble é um client desktop construído com **Tauri 2 + React** que autom
 | **1. Deep Link** | O app recebe `gaming-rumble://[base64]` com título, banner, magnet e tamanho |
 | **2. Setup** | Confirmação do caminho de instalação e verificação de espaço em disco |
 | **3. Download** | aria2c baixa via BitTorrent com progresso, velocidade e ETA em tempo real |
-| **4. Extração** | 7-Zip extrai automaticamente partes `.rar`, aplica patches e fixes |
+| **4. Extração** | 7-Zip (sistema ou auto-baixado) extrai partes `.rar`, aplica patches e fixes |
 | **5. Biblioteca** | Jogo adicionado à lista com atalho no Menu Iniciar criado automaticamente |
 
 ### Funcionalidades
@@ -59,12 +59,18 @@ Gaming Rumble é um client desktop construído com **Tauri 2 + React** que autom
 | Dependência | Uso |
 |---|---|
 | sysinfo | Listagem de discos e espaço |
-| reqwest | Download do aria2c |
+| reqwest | Download do aria2c e 7-Zip |
 | tokio | Runtime async |
-| sevenz-rust | Extração de arquivos |
+| sevenz-rust | Extração de arquivos (fallback) |
 | serde / serde_json | Serialização JSON |
 | tauri-plugin-deep-link | Protocolo `gaming-rumble://` |
 | tauri-plugin-single-instance | Evita múltiplas instâncias |
+
+### Binários Externos
+| Binário | Uso |
+|---|---|
+| aria2c.exe | Bundled — download via BitTorrent |
+| 7z.exe | System (`C:\Program Files\7-Zip`) ou baixado automaticamente do ip7z/7zip |
 
 ## 🎮 Como obter o link
 
