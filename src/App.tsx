@@ -213,16 +213,18 @@ export default function App() {
           }
         }
 
-        // Detect aria2c failures (timeout, no peers, etc.)
-        if (log.includes("Stop downloading") || log.includes("not complete") ||
-            log.includes("Exception caught") || log.includes("errorCode=")) {
-          newState.phase = "error";
-          newState.errorMessage = "Torrent indisponível — nenhum seed/peer encontrado.";
-          if (log.includes("bt-stop-timeout") || log.includes("not complete") ||
-              log.includes("Stop downloading")) {
-            addLog("ERROR", "Nenhum seed/peer encontrado. Torrent indisponível no momento.");
-          } else if (log.includes("Exception")) {
-            addLog("ERROR", `Erro no aria2: ${log}`);
+        // Detect aria2c failures (timeout, no peers, etc.) — only while downloading
+        if (newState.phase === "downloading") {
+          if (log.includes("Stop downloading") || log.includes("not complete") ||
+              log.includes("Exception caught") || log.includes("errorCode=")) {
+            newState.phase = "error";
+            newState.errorMessage = "Torrent indisponível — nenhum seed/peer encontrado.";
+            if (log.includes("bt-stop-timeout") || log.includes("not complete") ||
+                log.includes("Stop downloading")) {
+              addLog("ERROR", "Nenhum seed/peer encontrado. Torrent indisponível no momento.");
+            } else if (log.includes("Exception")) {
+              addLog("ERROR", `Erro no aria2: ${log}`);
+            }
           }
         }
 

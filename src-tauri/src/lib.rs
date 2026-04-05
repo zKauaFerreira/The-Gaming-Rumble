@@ -82,7 +82,15 @@ pub fn run() {
             create_shortcut,
             remove_shortcut
         ])
-        .setup(|_app| {
+        .setup(|app| {
+            // If launched with deep link, show window and emit deeplink
+            if let Some(uri) = std::env::args().find(|a| a.starts_with("gaming-rumble://")) {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+                let _ = app.emit("deeplink", uri);
+            }
             Ok(())
         })
         .run(tauri::generate_context!())
