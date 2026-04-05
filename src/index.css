@@ -6,29 +6,28 @@
 
 @layer base {
   :root {
-    --background: 230 25% 7%;
-    --foreground: 220 20% 92%;
-    --card: 230 20% 11%;
-    --card-foreground: 220 20% 92%;
-    --popover: 230 20% 11%;
-    --popover-foreground: 220 20% 92%;
-    --primary: 150 80% 45%;
-    --primary-foreground: 230 25% 7%;
-    --secondary: 230 15% 18%;
-    --secondary-foreground: 220 20% 85%;
-    --muted: 230 15% 15%;
-    --muted-foreground: 220 10% 55%;
-    --accent: 270 60% 55%;
-    --accent-foreground: 220 20% 95%;
+    --background: 220 20% 7%;
+    --foreground: 195 80% 85%;
+    --card: 220 18% 11%;
+    --card-foreground: 195 80% 85%;
+    --popover: 220 18% 11%;
+    --popover-foreground: 195 80% 85%;
+    --primary: 195 90% 70%;
+    --primary-foreground: 220 20% 7%;
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 195 60% 80%;
+    --muted: 220 15% 15%;
+    --muted-foreground: 195 20% 50%;
+    --accent: 195 90% 70%;
+    --accent-foreground: 220 20% 7%;
     --destructive: 0 70% 55%;
     --destructive-foreground: 220 20% 95%;
-    --border: 230 15% 18%;
-    --input: 230 15% 18%;
-    --ring: 150 80% 45%;
+    --border: 195 30% 18%;
+    --input: 220 15% 18%;
+    --ring: 195 90% 70%;
     --radius: 0.75rem;
-
-    --glow-primary: 150 80% 45%;
-    --glow-accent: 270 60% 55%;
+    --success: 150 70% 45%;
+    --success-foreground: 220 20% 7%;
   }
 }
 
@@ -46,8 +45,8 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px hsl(var(--glow-primary) / 0.2); }
-  50% { box-shadow: 0 0 40px hsl(var(--glow-primary) / 0.4); }
+  0%, 100% { box-shadow: 0 0 20px hsl(195 90% 70% / 0.15), 0 0 60px hsl(195 90% 70% / 0.05); }
+  50% { box-shadow: 0 0 30px hsl(195 90% 70% / 0.3), 0 0 80px hsl(195 90% 70% / 0.1); }
 }
 
 @keyframes spin-slow {
@@ -59,6 +58,12 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes check-pop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 .animate-fade-in-up {
   animation: fade-in-up 0.6s ease-out forwards;
 }
@@ -68,5 +73,9 @@
 }
 
 .animate-spin-slow {
-  animation: spin-slow 2s linear infinite;
+  animation: spin-slow 1.5s linear infinite;
+}
+
+.animate-check-pop {
+  animation: check-pop 0.5s ease-out forwards;
 }
