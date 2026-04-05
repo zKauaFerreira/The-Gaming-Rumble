@@ -44,6 +44,13 @@ const Index = () => {
       return;
     }
 
+    // Validar payload base64
+    const validation = validatePayload(data);
+    if (!validation.valid) {
+      setState("invalid-payload");
+      return;
+    }
+
     const url = `gaming-rumble://${data}`;
     setProtocolUrl(url);
 
