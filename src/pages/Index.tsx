@@ -1,7 +1,26 @@
 import { useEffect, useState, useCallback } from "react";
 import icon from "@/assets/icon.png";
 
-type PageState = "loading" | "opened" | "fallback" | "error";
+type PageState = "loading" | "opened" | "fallback" | "error" | "invalid-payload";
+
+const REQUIRED_FIELDS = ["title", "banner", "parts", "fileSize", "magnet"] as const;
+
+function validatePayload(base64: string): { valid: boolean; missingFields?: string[] } {
+  try {
+    const json = atob(base64);
+    const data = JSON.parse(json);
+    if (typeof data !== "object" || data === null) {
+      return { valid: false };
+    }
+    const missing = REQUIRED_FIELDS.filter((f) => !(f in data) || data[f] === undefined || data[f] === "");
+    if (missing.length > 0) {
+      return { valid: false, missingFields: [...missing] };
+    }
+    return { valid: true };
+  } catch {
+    return { valid: false };
+  }
+}
 
 const Index = () => {
   const [state, setState] = useState<PageState>("loading");
