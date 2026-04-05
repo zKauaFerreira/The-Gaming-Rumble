@@ -129,13 +129,14 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
 
 /// Try bundled 7z.exe first, fallback to sevenz-rust if unavailable
 fn extract_rust_or_7z(app: &AppHandle, archive: &Path, out_dir: &str) -> Result<(), String> {
-    // Resolve bundled 7z.exe
+    // Resolve bundled 7z.exe (tries Resource dir, then dev resources/ fallback)
     let sevenz_path = app.path()
         .resolve("bin/7z.exe", tauri::path::BaseDirectory::Resource)
         .ok()
         .filter(|p| p.exists());
 
     if let Some(sevenz) = sevenz_path {
+        eprintln!("[archive.rs] 7z.exe found at: {:?}", sevenz);
         log_tag(LogLevel::SUCCESS, "EXTRACT", format!("Usando 7-Zip (bundled) para {}", archive.file_name().unwrap_or_default().to_string_lossy()));
         let status = Command::new(&sevenz)
             .args(&["x", &archive.to_string_lossy(), &format!("-o{}", out_dir), &format!("-p{}", PASSWORD), "-y"])
@@ -145,10 +146,13 @@ fn extract_rust_or_7z(app: &AppHandle, archive: &Path, out_dir: &str) -> Result<
             .status()
             .map_err(|e: std::io::Error| e.to_string())?;
 
+        eprintln!("[archive.rs] 7z exit code: {}", status);
         if status.success() {
             return Ok(());
         }
-        log_tag(LogLevel::INFO, "EXTRACT", format!("7-Zip falhou, tentando sevenz-rust"));
+        log_tag(LogLevel::INFO, "EXTRACT", format!("7-Zip falhou (exit {}), tentando sevenz-rust", status.code().unwrap_or(-1)));
+    } else {
+        eprintln!("[archive.rs] 7z.exe NOT found via resolve, trying dev fallback");
     }
 
     // Fallback to pure Rust

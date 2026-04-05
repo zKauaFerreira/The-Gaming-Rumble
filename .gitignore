@@ -35,6 +35,7 @@ src-tauri/icons/
 !src-tauri/icons/icon.ico
 !src-tauri/icons/icon.icns
 !src-tauri/icons/README.md
+src-tauri/resources/bin/7z.exe
 
 # Torrent downloads
 torrents/
