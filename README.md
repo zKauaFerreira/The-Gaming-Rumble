@@ -36,12 +36,14 @@ Gaming Rumble é um client desktop construído com **Tauri 2 + React** que autom
 
 - Download via BitTorrent com trackers otimizados
 - Extração automática com senha `online-fix.me`
+- Download "Fix Only" (clique direito — baixa apenas Fix.rar, ignora extração)
 - Detecção inteligente do executável principal do jogo
 - Criação de atalho no Menu Iniciar
 - Biblioteca persistente com play/uninstall
 - Sistema de pausa/retomada de downloads
 - Verificação de espaço em disco antes de baixar
 - Suporte a jogos multi-partes com aplicação de fix
+- Mensagens de erro diferenciadas (torrent indisponível vs falha na extração)
 
 ## Stack Tecnológica
 
@@ -59,7 +61,7 @@ Gaming Rumble é um client desktop construído com **Tauri 2 + React** que autom
 | Dependência | Uso |
 |---|---|
 | sysinfo | Listagem de discos e espaço |
-| reqwest | Download do aria2c e 7-Zip |
+| reqwest | Downloads HTTP (aria2c se necessário) |
 | tokio | Runtime async |
 | sevenz-rust | Extração de arquivos (fallback) |
 | serde / serde_json | Serialização JSON |
@@ -70,7 +72,7 @@ Gaming Rumble é um client desktop construído com **Tauri 2 + React** que autom
 | Binário | Uso |
 |---|---|
 | aria2c.exe | Bundled — download via BitTorrent |
-| 7z.exe | System (`C:\Program Files\7-Zip`) ou baixado automaticamente do ip7z/7zip |
+| 7-ZIP/ | Bundled — pasta completa do 7-Zip com suporte RAR/RAR5 |
 
 ## 🎮 Como obter o link
 

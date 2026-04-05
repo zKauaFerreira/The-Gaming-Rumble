@@ -4,84 +4,50 @@ use std::process::{Command, Stdio};
 use std::os::windows::process::CommandExt;
 use sevenz_rust::{decompress_file_with_password, Password};
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use super::logger::{LogLevel, log_tag};
+
+fn dbg(msg: &str) {
+    eprintln!("[7z dbg] {}", msg);
+}
 
 const PASSWORD: &str = "online-fix.me";
 
 static SEVENZ_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
 
-fn find_system_7z() -> Option<PathBuf> {
-    for c in &["C:\\Program Files\\7-Zip\\7z.exe", "C:\\Program Files (x86)\\7-Zip\\7z.exe"] {
-        let p = PathBuf::from(c);
-        if p.exists() { return Some(p); }
-    }
-    None
-}
-
-fn try_7z_from_zip() -> Option<PathBuf> {
-    let sevenz = dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("C:\\Users\\Administrator\\AppData\\Local"))
-        .join("GamingRumble\\bin/7z.exe");
-    sevenz.exists().then_some(sevenz)
-}
-
-async fn ensure_7z() -> Option<PathBuf> {
+async fn ensure_7z(app: &AppHandle) -> Option<PathBuf> {
+    dbg("ensure_7z called");
     let cached = SEVENZ_PATH.lock().unwrap().clone();
-    if let Some(ref p) = cached { if p.exists() { return cached; } }
+    if let Some(ref p) = cached {
+        dbg(&format!("cached path: {:?}, exists: {}", p, p.exists()));
+        if p.exists() { return cached; }
+    }
     drop(cached);
 
-    if let Some(p) = find_system_7z().or_else(try_7z_from_zip) {
-        *SEVENZ_PATH.lock().unwrap() = Some(p.clone());
-        return Some(p);
+    // 1. System installed
+    for c in &["C:\\Program Files\\7-Zip\\7z.exe", "C:\\Program Files (x86)\\7-Zip\\7z.exe"] {
+        let p = PathBuf::from(c);
+        if p.exists() {
+            dbg(&format!("found system 7z: {:?}", p));
+            *SEVENZ_PATH.lock().unwrap() = Some(p.clone());
+            return Some(p);
+        }
     }
 
-    #[cfg(target_os = "windows")]
-    if let Some(sevenz) = download_7z().await {
-        *SEVENZ_PATH.lock().unwrap() = Some(sevenz.clone());
-        return Some(sevenz);
+    // 2. Bundled with app resources
+    if let Ok(res) = app.path().resolve("7-ZIP/7z.exe", tauri::path::BaseDirectory::Resource) {
+        dbg(&format!("resolve path: {:?}", res));
+        let sevenz_path: PathBuf = res;
+        if sevenz_path.exists() {
+            dbg(&format!("bundled 7z found: {:?}", sevenz_path));
+            *SEVENZ_PATH.lock().unwrap() = Some(sevenz_path.clone());
+            return Some(sevenz_path);
+        }
     }
 
+    dbg("7z not available");
     None
-}
-
-#[cfg(target_os = "windows")]
-async fn download_7z() -> Option<PathBuf> {
-    let client = reqwest::Client::new();
-    let resp = client.get("https://api.github.com/repos/ip7z/7zip/releases/latest")
-        .header("User-Agent", "GamingRumble-Launcher")
-        .send().await.ok()?;
-    let json: serde_json::Value = resp.json().await.ok()?;
-    let tag = json.get("tag_name")?.as_str()?;
-    let app_data = dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("C:\\Users\\Administrator\\AppData\\Local"))
-        .join("GamingRumble\\bin");
-    std::fs::create_dir_all(&app_data).ok()?;
-
-    let tag_no_dot = tag.replace('.', "");
-    let archive_name = format!("7z{}-x64.exe", tag_no_dot);
-    let dl_url = format!("https://github.com/ip7z/7zip/releases/download/{}/{}", tag, archive_name);
-    log_tag(LogLevel::INFO, "EXTRACT", format!("Baixando 7-Zip {} ...", tag));
-
-    let temp_exe = app_data.join("7z_installer.exe");
-    let resp = client.get(&dl_url).send().await.ok()?;
-    let bytes = resp.bytes().await.ok()?;
-    std::fs::write(&temp_exe, &bytes).ok()?;
-
-    // Run silent install to extract 7z.exe
-    let status = Command::new(&temp_exe)
-        .args(["/S", "/D", app_data.to_str()?])
-        .creation_flags(0x08000000)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .ok();
-
-    std::fs::remove_file(&temp_exe).ok()?;
-
-    let sevenz_path = app_data.join("7z.exe");
-    sevenz_path.exists().then_some(sevenz_path)
 }
 
 #[tauri::command]
@@ -203,8 +169,8 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
 }
 
 /// Try system 7z first, fallback to sevenz-rust
-async fn extract_rust_or_7z(archive: &Path, out_dir: &str) -> Result<(), String> {
-    if let Some(sevenz) = ensure_7z().await {
+async fn extract_rust_or_7z(app: &AppHandle, archive: &Path, out_dir: &str) -> Result<(), String> {
+    if let Some(sevenz) = ensure_7z(app).await {
         log_tag(LogLevel::SUCCESS, "EXTRACT", format!("Usando 7-Zip para {}",
             archive.file_name().unwrap_or_default().to_string_lossy()));
 
@@ -245,7 +211,7 @@ async fn run_extract_with_progress(
 
     std::fs::create_dir_all(out_dir).map_err(|e| e.to_string())?;
 
-    extract_rust_or_7z(archive, &out_dir.to_string_lossy())
+    extract_rust_or_7z(app, archive, &out_dir.to_string_lossy())
         .await
         .map_err(|e| format!("Falha ao extrair {} (erro: {})", file_name, e))?;
 

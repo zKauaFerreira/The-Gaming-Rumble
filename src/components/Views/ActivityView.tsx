@@ -24,10 +24,15 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
     </div>
   );
 
-  const { payload, progressPercent, speedMBs, eta, elapsedTime, phase, peers, seeds, fixOnly } = state;
+  const { payload, progressPercent, speedMBs, eta, elapsedTime, phase, peers, seeds, fixOnly, errorMessage } = state;
   const isDone = phase === "done";
   const isExtracting = phase === "extracting";
   const isError = phase === "error";
+
+  // Determine error type: torrent (no peers, connection) vs extraction (corrupt, bad archive)
+  const errorType: "torrent" | "extraction" = errorMessage?.includes("extração") || errorMessage?.includes("extrair")
+    ? "extraction"
+    : "torrent";
 
   return (
     <main className="flex-1 flex flex-col overflow-hidden relative font-bold uppercase">
@@ -83,10 +88,25 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
           {isError ? (
-            <div className="col-span-2 bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-2xl p-4 flex flex-col gap-1 items-center">
-              <span className="text-[10px] text-[#ffb4ab] tracking-widest uppercase">Nenhum peer/seed disponível</span>
-              <span className="text-[8px] text-slate-400">Torrent indisponível no momento. Tente mais tarde.</span>
-            </div>
+            <>
+              <div className="col-span-2 bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-2xl p-4 flex flex-col gap-1 items-center">
+                <span className="text-[10px] text-[#ffb4ab] tracking-widest uppercase">
+                  {errorType === "extraction" ? "Falha na Extração" : "Torrent Indisponível"}
+                </span>
+                <span className="text-[8px] text-slate-400">
+                  {errorType === "extraction"
+                    ? "Arquivo corrompido ou inválido. Verifique a fonte do magnet link."
+                    : "Nenhum peer/seed disponível. Tente mais tarde."}
+                </span>
+              </div>
+              {onCancel && (
+                <div className="col-span-2">
+                  <button onClick={onCancel} className="w-full h-16 bg-[#ffb4ab]/5 rounded-2xl border border-[#ffb4ab]/10 text-[#ffb4ab] text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[#ffb4ab]/15 transition-all group">
+                    <Icon name="cancel" size={20} className="group-hover:scale-110 transition-transform" /> CANCELAR
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <>
               <div className="bg-[#1b1b1d] p-5 rounded-2xl border border-white/5 flex flex-col gap-1">

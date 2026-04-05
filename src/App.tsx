@@ -97,7 +97,7 @@ export default function App() {
           addLog("SUCCESS", "Protocolo Finalizado e Adicionado à Biblioteca.");
         } catch (e) {
           addLog("ERROR", `Falha na Extração: ${e}`);
-          setDownloadState(prev => prev ? ({ ...prev, phase: "error" }) : null);
+          setDownloadState(prev => prev ? ({ ...prev, phase: "error", errorMessage: `Falha na extração: ${e}` }) : null);
         }
       };
       runExtraction();
@@ -217,6 +217,7 @@ export default function App() {
         if (log.includes("Stop downloading") || log.includes("not complete") ||
             log.includes("Exception caught") || log.includes("errorCode=")) {
           newState.phase = "error";
+          newState.errorMessage = "Torrent indisponível — nenhum seed/peer encontrado.";
           if (log.includes("bt-stop-timeout") || log.includes("not complete") ||
               log.includes("Stop downloading")) {
             addLog("ERROR", "Nenhum seed/peer encontrado. Torrent indisponível no momento.");

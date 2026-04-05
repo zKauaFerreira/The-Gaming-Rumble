@@ -49,6 +49,7 @@ export interface DownloadState {
   peers: number;
   seeds: number;
   fixOnly: boolean;
+  errorMessage?: string;
 }
 
 export interface LogEntry {
