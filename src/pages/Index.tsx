@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { inflateSync } from "fflate";
+import { unzlibSync } from "fflate";
 import icon from "@/assets/icon.png";
 
 type PageState = "loading" | "opened" | "fallback" | "error" | "invalid-payload";
@@ -31,7 +31,7 @@ function decodeData(encoded: string): GameData | null {
     }
 
     // 2. Decompress zlib
-    const decompressed = inflateSync(bytes);
+    const decompressed = unzlibSync(bytes);
 
     // 3. JSON parse
     const str = new TextDecoder().decode(decompressed);
