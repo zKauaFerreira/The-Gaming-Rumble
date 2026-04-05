@@ -75,6 +75,15 @@ const Index = () => {
     };
   }, [tryOpenProtocol]);
 
+  // Fechar aba automaticamente após 5s quando o app abrir
+  useEffect(() => {
+    if (state !== "opened") return;
+    const timer = setTimeout(() => {
+      window.close();
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [state]);
+
   // Erro: sem parâmetro data
   if (state === "error") {
     return (
@@ -137,7 +146,7 @@ const Index = () => {
               </svg>
             </div>
             <p className="text-lg font-medium">Jogo aberto com sucesso!</p>
-            <p className="text-sm text-muted-foreground mt-1">Você já pode fechar esta aba</p>
+            <p className="text-sm text-muted-foreground mt-1">Esta aba será fechada automaticamente...</p>
           </div>
         )}
 
