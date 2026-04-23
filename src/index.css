@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #131315;
+  --color-primary: #a4e6ff;
+  --color-primary-container: #00d1ff;
+  --color-surface-low: #1b1b1d;
+  --color-surface-high: #2a2a2c;
+  --color-surface-highest: #333335;
+  --color-on-primary: #000000;
+  --color-outline-variant: rgba(60, 73, 78, 0.15);
+  
+  --font-inter: "Inter", sans-serif;
+  
+  --radius-xl: 12px;
+  --radius-lg: 8px;
+}
+
+@layer base {
+  :root {
+    @apply antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-white font-inter overflow-hidden;
+    user-select: none;
+  }
+
+  /* Scrollbar Stealth Mode */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-high rounded-full;
+  }
+}
+
+/* Glassmorphism Utility */
+.glass {
+  @apply bg-surface-highest/60 backdrop-blur-2xl;
+}
+
+/* Ambient Glow */
+.glow-primary {
+  box-shadow: 0 0 20px rgba(164, 230, 255, 0.1);
+}
+
+.button-gradient {
+  background: linear-gradient(135deg, #a4e6ff 0%, #00d1ff 100%);
+}
