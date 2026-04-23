@@ -1,0 +1,39 @@
+name: Clear Repository Data
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout games branch
+        uses: actions/checkout@v4
+        with:
+          ref: games
+
+      - name: Remove generated data
+        run: |
+          rm -rf torrents/
+          rm -f online_fix_games.json
+          rm -f stats.json
+          mkdir -p torrents/
+          echo "Repository data cleaned."
+
+      - name: Commit cleanup
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add .
+
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: manual repository cleanup (reset data)"
+            git push origin games
+          else
+            echo "No changes detected."
+          fi
