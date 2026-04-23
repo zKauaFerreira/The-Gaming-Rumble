@@ -1,0 +1,32 @@
+name: Clear Repository Data
+
+on:
+  workflow_dispatch:  # Disparo manual para resetar o repo
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: games
+
+      - name: Remove Data
+        run: |
+          rm -rf torrents/
+          rm -f online_fix_games.json
+          rm -f stats.json
+          mkdir -p torrents/
+          echo "Repositório limpo!"
+
+      - name: Commit Cleanup
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "chore: manual repository cleanup (reset data)"
+          git push origin games

@@ -1,0 +1,43 @@
+name: Steam AppList Daily
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 15 * * *'  # 15:00 UTC = 12:00 Brasília
+
+jobs:
+  steam-applist:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: games
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Update Steam app list
+        env:
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+        run: python steam_applist.py
+
+      - name: Commit and push app list
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add steam_applist_full.json
+
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update steam applist [$(date +'%Y-%m-%d %H:%M')]"
+            git push origin games
+          else
+            echo "Nenhuma mudança detectada."
+          fi

@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+.DS_Store
+# Arquivos de log e temporários do sistema
+*.log

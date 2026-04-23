@@ -1,0 +1,6 @@
+requests
+beautifulsoup4
+cloudscraper
+bencode.py
+rapidfuzz
+python-dotenv

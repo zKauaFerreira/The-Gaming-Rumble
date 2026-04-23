@@ -1,0 +1,53 @@
+name: Scrape Online-Fix
+
+on:
+  workflow_dispatch:  # Permite rodar manualmente
+  schedule:
+    - cron: '0 18 * * *'  # 18:00 UTC = 15:00 Brasília
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: games
+          fetch-depth: 1  # Shallow clone para ser mais rápido
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip' # Cache das dependências para acelerar runs futuros
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scraper
+        env:
+          ONLINEFIX_USER: ${{ secrets.ONLINEFIX_USER }}
+          ONLINEFIX_PASS: ${{ secrets.ONLINEFIX_PASS }}
+          PROXY_LIST_URL: ${{ secrets.PROXY_LIST_URL }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_BRANCH: games
+        run: python scrapper.py --workers 6
+
+      - name: Commit and Push results
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Adiciona arquivos novos e modificados
+          git add torrents/ online_fix_games.json stats.json
+          
+          # Só commita se houver mudanças reais
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: scrape update [$(date +'%Y-%m-%d %H:%M')]"
+            git push origin games
+          else
+            echo "Nenhuma mudança detectada."
+          fi
