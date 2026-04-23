@@ -35,13 +35,14 @@ O foco do app é reduzir atrito: menos passos manuais, menos setup repetitivo e 
 
 ## 🧭 Fluxo Do Produto
 
-| Etapa | O que acontece |
-|---|---|
-| `1. Deep link` | O app recebe um `gaming-rumble://[base64]` com título, banner, magnet, tamanho e metadados básicos |
-| `2. Setup` | O usuário confirma o local de instalação e o app verifica espaço em disco |
-| `3. Download` | O `aria2c` inicia o download BitTorrent com progresso, velocidade, seeds, peers e ETA |
-| `4. Extração` | O app usa 7-Zip para extrair arquivos, lidar com conteúdo multi-parte e aplicar o fluxo pós-download |
-| `5. Biblioteca` | O jogo é salvo localmente e um atalho pode ser criado automaticamente no Menu Iniciar |
+```mermaid
+flowchart LR
+  A["Deep Link"] --> B["Setup"]
+  B --> C["Download via aria2c"]
+  C --> D["Extração com 7-Zip"]
+  D --> E["Biblioteca Local"]
+  E --> F["Atalho e Execução"]
+```
 
 ## ✨ Recursos Principais
 
@@ -84,40 +85,6 @@ O foco do app é reduzir atrito: menos passos manuais, menos setup repetitivo e 
     </td>
   </tr>
 </table>
-
-### Stack técnica detalhada
-
-| Camada | Tecnologias | Papel no projeto |
-|---|---|---|
-| Frontend | React 19, TypeScript, Vite 7 | Interface principal do app |
-| UI / Styling | Tailwind CSS 4, CSS customizado, Framer Motion | Visual, layout, animações e feedback de interação |
-| Bridge desktop | Tauri 2, `@tauri-apps/api` | Comunicação entre frontend e sistema |
-| Backend nativo | Rust, Tokio, Serde | Comandos nativos, filesystem, processos e integração local |
-| Deep Link | `tauri-plugin-deep-link` | Recebe payloads `gaming-rumble://` |
-| App control | `tauri-plugin-single-instance`, `tauri-plugin-opener` | Instância única e abertura de caminhos/links |
-| Download | `aria2c.exe` | Cliente BitTorrent usado no fluxo principal |
-| Extração | 7-Zip bundled | Extração de arquivos e suporte a formatos compactados |
-
-### Dependências do frontend
-
-| Pacote | Uso |
-|---|---|
-| `react` / `react-dom` | Renderização da interface |
-| `framer-motion` | Transições e animações |
-| `clsx` / `tailwind-merge` | Composição de classes |
-| `lucide-react` | Ícones adicionais |
-| `@tauri-apps/api` | Invocações nativas e eventos |
-
-### Módulos nativos em Rust
-
-| Módulo | Função |
-|---|---|
-| `torrent.rs` | Orquestra download, status e integração com `aria2c` |
-| `archive.rs` | Extração, limpeza, flatten e finalização |
-| `disk.rs` | Leitura de discos e espaço disponível |
-| `library.rs` | Persistência da biblioteca local |
-| `system.rs` | Ações de sistema, atalhos e integração desktop |
-| `logger.rs` | Logs internos do app |
 
 ## 🖥️ Plataforma Suportada
 
