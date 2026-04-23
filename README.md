@@ -1,75 +1,75 @@
 # 🎮 Gaming Rumble (Scrapper)
 
-> An automated Online-Fix indexing pipeline that scrapes game entries, stores `.torrent` files in this repository, enriches confirmed matches with Steam metadata, and publishes a machine-readable dataset for badges, dashboards, and integrations.
+> Pipeline automatizado para indexar jogos do Online-Fix, salvar arquivos `.torrent` neste repositório, enriquecer correspondências confiáveis com metadados da Steam e publicar um dataset pronto para consumo por apps, APIs, badges e dashboards.
 
-## ✨ Live Snapshot
+## ✨ Snapshot Ao Vivo
 
-| Total Games | Steam Matched | Steam Missing | Success Rate | Online-Fix Pages | Torrent Files |
+| Total de Jogos | Steam Encontrados | Steam Ausentes | Success Rate | Páginas Online-Fix | Arquivos Torrent |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.total_games&label=%20&color=2ea44f&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_with_metadata&label=%20&color=1f6feb&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_without_metadata&label=%20&color=d73a49&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.success_rate&suffix=%25&label=%20&color=8250df&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.online_fix_pages_total&label=%20&color=fb8500&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.torrent_files_total&label=%20&color=0a9396&style=flat-square) |
 
-## 📌 What This Repository Does
+## 📌 O Que Este Repositório Faz
 
-This project automates the full data pipeline for Online-Fix game entries:
+Este projeto automatiza toda a pipeline de coleta dos jogos do Online-Fix:
 
-- Scrapes game pages from `online-fix.me`
-- Downloads and stores `.torrent` files inside the repository
-- Extracts torrent metadata such as BTIH, file list, and magnet link
-- Tries to match each game against a local Steam app catalog
-- Fetches Steam `appdetails` only for confident matches
-- Publishes `online_fix_games.json` as the main dataset
-- Publishes `stats.json` for dynamic badges and external consumers
+- Faz scrape das páginas em `online-fix.me`
+- Baixa e armazena arquivos `.torrent` dentro do repositório
+- Extrai metadados do torrent como BTIH, lista de arquivos e magnet link
+- Tenta encontrar o jogo no catálogo local da Steam
+- Busca `appdetails` da Steam apenas para matches confiáveis
+- Publica `online_fix_games.json` como dataset principal
+- Publica `stats.json` para badges, automações e consumo externo
 
-## 🌍 Public Dataset Notice
+## 🌍 Aviso Público Do Dataset
 
 > [!IMPORTANT]
-> This repository is public, and the scraped dataset is public as well.
+> Este repositório é público, e o dataset gerado também é público.
 >
-> **Main dataset**
+> **Dataset principal**
 > `online_fix_games.json`
 >
-> **Direct raw URL**
+> **URL raw direta**
 > [https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json](https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json)
 >
-> **Steam catalog snapshot**
+> **Snapshot do catálogo Steam**
 > [https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/steam_applist_full.json](https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/steam_applist_full.json)
 >
-> **Update schedule**
-> The dataset is refreshed automatically every day by GitHub Actions, currently around **18:00 UTC**.
+> **Agenda de atualização**
+> O dataset é atualizado automaticamente todos os dias via GitHub Actions, atualmente por volta de **18:00 UTC**.
 >
-> **Recommended usage**
-> To reduce repeated raw GitHub requests and avoid unnecessary rate-limit pressure, download the JSON first and consume it locally from disk, cache, or your own database layer.
+> **Uso recomendado**
+> Para evitar várias requisições repetidas ao raw do GitHub e reduzir a chance de rate limit, o ideal é baixar o JSON primeiro e consumi-lo localmente por arquivo, cache ou banco de dados.
 
-### ⬇️ Recommended: Download The JSON Locally First
+### ⬇️ Recomendado: Baixe O JSON Localmente Primeiro
 
-Using `curl`:
+Usando `curl`:
 
 ```bash
 curl -L "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json" -o online_fix_games.json
 ```
 
-Using `wget`:
+Usando `wget`:
 
 ```bash
 wget -O online_fix_games.json "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json"
 ```
 
-Then load the local file from your own script, API, app, or database job instead of hitting the raw URL on every request.
+Depois disso, carregue o arquivo local no seu script, app, API ou rotina de banco, em vez de bater na URL raw a cada requisição.
 
-## 🧠 Main Outputs
+## 🧠 Saídas Principais
 
-| File | Purpose |
+| Arquivo | Finalidade |
 |---|---|
-| `online_fix_games.json` | Main indexed dataset |
-| `stats.json` | Lightweight stats file for badges, dashboards, and automation |
-| `steam_applist_full.json` | Local Steam catalog used for offline matching |
-| `torrents/batch_*/*.torrent` | Stored torrent files grouped by source page |
+| `online_fix_games.json` | Dataset principal indexado |
+| `stats.json` | Estatísticas leves para badges, dashboards e automações |
+| `steam_applist_full.json` | Catálogo local da Steam usado para matching offline |
+| `torrents/batch_*/*.torrent` | Arquivos torrent salvos e agrupados por página |
 
-## 🗂️ Dataset Structure
+## 🗂️ Estrutura Do Dataset
 
 ### `online_fix_games.json`
 
-Top-level structure:
+Estrutura de topo:
 
 ```json
 {
@@ -78,47 +78,47 @@ Top-level structure:
 }
 ```
 
-Each item in `downloads` contains the scraped game entry, torrent metadata, and optionally Steam metadata.
+Cada item de `downloads` contém os dados raspados do jogo, os metadados do torrent e, quando houver match confiável, os metadados da Steam.
 
-### Update fields from the page
+### Campos de update vindos da página
 
-The scraper reads the page update block from the `edit` section used by Online-Fix, for example:
+O scraper lê o bloco de atualização presente na seção `edit` da página do Online-Fix, por exemplo:
 
 ```txt
 Обновлено: Вчера, 13:24. Причина: Игра обновлена до версии 1.11.8838be4.
 ```
 
-Those values are stored across these fields:
+Esses dados são distribuídos nos campos abaixo:
 
-- `update_info`: the raw update/change text extracted from the page
-- `update_date`: the parsed normalized update datetime when the scraper can structure it
-- `formatted_update_date`: a human-friendly normalized datetime string
-- `last_update`: the page `<time datetime="...">` value when present
+- `update_info`: texto bruto de atualização/mudança extraído da página
+- `update_date`: data normalizada e estruturada quando o scraper consegue interpretar o valor
+- `formatted_update_date`: versão legível e normalizada da data de update
+- `last_update`: valor de `<time datetime="...">` quando esse campo existe no HTML
 
-### Entry fields
+### Campos de cada entrada
 
-| Field | Description |
+| Campo | Descrição |
 |---|---|
-| `title` | Clean game title |
-| `url` | Online-Fix game page |
-| `page` | Source page number |
-| `last_update` | `<time datetime="...">` value extracted from the page HTML |
-| `release_date` | Release date parsed from page preview |
-| `update_info` | Raw update/change text from the page `edit` block |
-| `update_date` | Parsed structured date derived from the page update block |
-| `formatted_update_date` | Human-friendly normalized update datetime |
-| `unique_hash` | Torrent info-hash / BTIH source hash |
-| `fileSize` | Total torrent size |
-| `magnet` | Magnet link with trackers |
-| `torrent_file` | Raw GitHub URL to the `.torrent` file |
-| `created_at` | Torrent creation date |
-| `webdav_updated_at` | WebDAV last-modified value when available |
-| `files` | File list inside the torrent with file names and sizes |
-| `comment` | Embedded torrent comment |
-| `scraped_at` | Local scrape timestamp for this entry |
-| `steam` | Steam metadata object, or a `not_found` payload with a reason |
+| `title` | Título limpo do jogo |
+| `url` | URL da página no Online-Fix |
+| `page` | Número da página de origem |
+| `last_update` | Valor do `<time datetime="...">` extraído do HTML |
+| `release_date` | Data de lançamento capturada no preview da página |
+| `update_info` | Texto bruto do bloco `edit` com a informação da mudança |
+| `update_date` | Data estruturada derivada do bloco de update |
+| `formatted_update_date` | Data de update normalizada em formato amigável |
+| `unique_hash` | Info-hash / BTIH do torrent |
+| `fileSize` | Tamanho total do torrent |
+| `magnet` | Magnet link com trackers |
+| `torrent_file` | URL raw do GitHub apontando para o `.torrent` salvo |
+| `created_at` | Data de criação do torrent |
+| `webdav_updated_at` | Valor `last-modified` do WebDAV quando disponível |
+| `files` | Lista de arquivos dentro do torrent com nomes e tamanhos |
+| `comment` | Comentário embutido no torrent |
+| `scraped_at` | Timestamp local em que a entrada foi processada |
+| `steam` | Objeto com metadados da Steam ou payload `not_found` com motivo |
 
-### Example entry
+### Exemplo de entrada
 
 ```json
 {
@@ -161,9 +161,9 @@ Those values are stored across these fields:
 }
 ```
 
-### Steam object example
+### Exemplo do objeto Steam
 
-When a confident Steam match exists, the `steam` field looks like this:
+Quando existe um match confiável com a Steam, o campo `steam` fica assim:
 
 ```json
 {
@@ -182,7 +182,7 @@ When a confident Steam match exists, the `steam` field looks like this:
 }
 ```
 
-If the scraper cannot validate a safe Steam match, it stores a lightweight fallback instead:
+Se o scraper não conseguir validar um match seguro, ele grava um fallback leve assim:
 
 ```json
 {
@@ -194,9 +194,9 @@ If the scraper cannot validate a safe Steam match, it stores a lightweight fallb
 
 ### `stats.json`
 
-This file is designed to be badge-friendly.
+Este arquivo foi pensado para ser amigável com badges.
 
-Example structure:
+Exemplo de estrutura:
 
 ```json
 {
@@ -223,43 +223,43 @@ Example structure:
 }
 ```
 
-## 🏗️ How The Pipeline Works
+## 🏗️ Como A Pipeline Funciona
 
 ```mermaid
 flowchart LR
-  A["Online-Fix Pages"] --> B["scrapper.py"]
-  B --> C["Extract page data"]
-  B --> D["Download .torrent files"]
-  B --> E["Parse torrent metadata"]
-  B --> F["Match against steam_applist_full.json"]
+  A["Páginas do Online-Fix"] --> B["scrapper.py"]
+  B --> C["Extrai os dados da página"]
+  B --> D["Baixa arquivos .torrent"]
+  B --> E["Lê os metadados do torrent"]
+  B --> F["Compara com steam_applist_full.json"]
   F --> G["Steam appdetails"]
   C --> H["online_fix_games.json"]
   D --> I["torrents/batch_*"]
   G --> H
   H --> J["stats.json"]
-  J --> K["README badges"]
+  J --> K["Badges do README"]
 ```
 
-## 🔎 Fuzzy Matching Notes
+## 🔎 Notas Sobre O Fuzzy Matching
 
-The Steam matcher is intentionally conservative.
+O matcher da Steam é propositalmente conservador.
 
-- It normalizes punctuation, accents, and common roman numerals
-- It compares meaningful textual tokens instead of trusting generic words
-- It handles numbers and years separately to reduce false positives
-- It rejects low-confidence candidates instead of forcing a wrong Steam match
+- Normaliza pontuação, acentos e números romanos comuns
+- Compara tokens relevantes em vez de confiar em palavras genéricas
+- Trata números e anos separadamente para reduzir falso positivo
+- Rejeita candidatos de baixa confiança em vez de forçar um match errado
 
-That means a game may appear with `steam.not_found = true` when confidence is too low, which is usually better than attaching metadata from the wrong title.
+Isso significa que um jogo pode aparecer com `steam.not_found = true` quando a confiança é baixa, e isso costuma ser melhor do que anexar metadados do jogo errado.
 
-## ⚙️ Local Setup
+## ⚙️ Configuração Local
 
-### Requirements
+### Requisitos
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Current dependencies:
+Dependências atuais:
 
 ```txt
 requests
@@ -270,96 +270,96 @@ rapidfuzz
 python-dotenv
 ```
 
-### Environment Variables
+### Variáveis de ambiente
 
-Create a `.env` file or export these variables:
+Crie um `.env` ou exporte estas variáveis:
 
 ```bash
-ONLINEFIX_USER=your_username
-ONLINEFIX_PASS=your_password
+ONLINEFIX_USER=seu_usuario
+ONLINEFIX_PASS=sua_senha
 PROXY_LIST_URL=https://example.com/proxies.txt
 GITHUB_REPOSITORY=zKauaFerreira/The-Gaming-Rumble
 GITHUB_BRANCH=games
 ```
 
-`PROXY_LIST_URL` supports:
+`PROXY_LIST_URL` aceita:
 
-- A single URL
-- Multiple list URLs separated by `;`
-- Multiple list URLs separated by line breaks
+- Uma única URL
+- Várias URLs separadas por `;`
+- Várias URLs separadas por quebra de linha
 
-Example with multiple proxy lists:
+Exemplo com várias listas de proxy:
 
 ```bash
 PROXY_LIST_URL=https://example.com/list-a.txt;https://example.com/list-b.txt;https://example.com/list-c.txt
 ```
 
-Each proxy list is expected to contain one proxy per line in this format:
+Espera-se que cada lista de proxy tenha um proxy por linha no formato:
 
 ```txt
 IP:PORT:USER:PASS
 ```
 
-### Steam Catalog
+### Catálogo da Steam
 
-To keep matching fast and mostly offline, download the Steam app catalog:
+Para manter o matching rápido e majoritariamente offline, baixe o catálogo de apps da Steam:
 
 ```bash
 curl "https://api.steampowered.com/ISteamApps/GetAppList/v2/" -o steam_applist_full.json
 ```
 
-## 🚀 Usage
+## 🚀 Uso
 
-### Run the scraper
+### Rodar o scraper
 
 ```bash
 python scrapper.py --pages 10 --workers 8
 ```
 
-### Available CLI arguments
+### Argumentos CLI disponíveis
 
-| Argument | Description |
+| Argumento | Descrição |
 |---|---|
-| `--pages` | Final page to process |
-| `--start-page` | First page to process |
-| `--workers` | Concurrent workers for torrent + Steam tasks |
-| `--baseurl` | Override Online-Fix base URL |
-| `--user` | Username override |
-| `--password` | Password override |
-| `--cookie` | Manual `online_fix_auth` cookie |
+| `--pages` | Última página a ser processada |
+| `--start-page` | Primeira página a ser processada |
+| `--workers` | Concorrência para tarefas de torrent + Steam |
+| `--baseurl` | Sobrescreve a URL base do Online-Fix |
+| `--user` | Sobrescreve o usuário |
+| `--password` | Sobrescreve a senha |
+| `--cookie` | Cookie manual `online_fix_auth` |
 
 ## 🤖 GitHub Actions
 
-This repository includes three workflows:
+Este repositório inclui três workflows:
 
-| Workflow | Purpose |
+| Workflow | Finalidade |
 |---|---|
-| `scrape.yml` | Runs the scraper and updates JSON + torrents + stats |
-| `steam-applist.yml` | Refreshes the Steam app catalog |
-| `clean.yml` | Removes generated data from the branch |
+| `scrape.yml` | Executa o scraper e atualiza JSON + torrents + stats |
+| `steam-applist.yml` | Atualiza o catálogo da Steam |
+| `clean.yml` | Remove dados gerados da branch |
 
-### Required secrets
+### Secrets necessários
 
 - `ONLINEFIX_USER`
 - `ONLINEFIX_PASS`
-- `PROXY_LIST_URL` optional, supports one or many proxy-list URLs
-- `STEAM_API_KEY` only for `steam_applist.py`
+- `PROXY_LIST_URL` opcional, aceita uma ou várias URLs de lista de proxy
+- `STEAM_API_KEY` apenas para `steam_applist.py`
 
-## 🏷️ Dynamic Badges From `stats.json`
+## 🏷️ Badges Dinâmicas Com `stats.json`
 
-You can create one badge per field with Shields.io.
+Você pode criar uma badge para cada campo usando o Shields.io.
 
-Example:
+Exemplo:
 
 ```md
 ![Total Games](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.total_games&label=Total%20Games&color=2ea44f&style=for-the-badge)
 ```
 
-The `url=` parameter should be URL-encoded when building Shields dynamic JSON badges.
+O parâmetro `url=` deve ser URL-encoded ao montar badges dinâmicas com JSON no Shields.
 
-Useful badge queries:
+Consultas úteis:
 
-| Label | Query |
+| Rótulo | Query |
 |---|---|
 | Total Games | `%24.total_games` |
 | Steam Matched | `%24.steam_with_metadata` |
@@ -371,9 +371,9 @@ Useful badge queries:
 | Last Page | `%24.last_page_in_json` |
 
 > [!NOTE]
-> Shields.io caches responses, so badge updates are not always instant.
+> O Shields.io usa cache, então as badges nem sempre atualizam imediatamente.
 
-## 📁 Repository Layout
+## 📁 Estrutura Do Repositório
 
 ```txt
 .
@@ -390,33 +390,33 @@ Useful badge queries:
 └── README.md
 ```
 
-## 🛡️ Operational Notes
+## 🛠️ Notas Operacionais
 
-- The target site uses non-UTF8 content in some responses
-- Cloudflare bypass relies on `cloudscraper` when available
-- Steam metadata is fetched only after local catalog matching
-- Proxy rotation helps reduce rate limiting on Steam calls
-- Torrent raw links are normalized to this repository and the `games` branch
+- O site alvo retorna conteúdo não UTF-8 em algumas respostas
+- O bypass do Cloudflare usa `cloudscraper` quando disponível
+- Os metadados da Steam só são buscados após o match no catálogo local
+- Rotação de proxies ajuda a reduzir rate limit nas chamadas da Steam
+- Os links raw de torrent são normalizados para este repositório e para a branch `games`
 
-## ⚠️ Important
+## ⚠️ Importante
 
 > [!WARNING]
-> Do not commit real credentials, cookies, or private proxy lists into the repository.
+> Não faça commit de credenciais reais, cookies ou listas privadas de proxy neste repositório.
 
 > [!TIP]
-> If site markup changes, start by reviewing `_extract_games`, `find_torrent_robust`, and the Steam matching helpers inside `scrapper.py`.
+> Se o HTML do site mudar, comece revisando `_extract_games`, `find_torrent_robust` e os helpers de Steam matching dentro de `scrapper.py`.
 
-## 📜 License
+## 📜 Licença
 
-This repository is released for educational and research-oriented purposes only.
+Este repositório é disponibilizado apenas para fins educacionais e de pesquisa.
 
-See the full license and disclaimer in [LICENSE](C:/Users/Administrator/Pictures/Gaming-Rumble/LICENSE).
+Veja a licença completa e o aviso legal em [LICENSE](C:/Users/Administrator/Pictures/Gaming-Rumble/LICENSE).
 
-### Short disclaimer
+### Resumo do aviso
 
 > [!WARNING]
-> This software is provided **"AS IS"**, without warranty of any kind, express or implied, including but not limited to merchantability, fitness for a particular purpose, and noninfringement.
+> Este software é fornecido **"AS IS"**, sem garantia de qualquer tipo, expressa ou implícita, incluindo, mas não se limitando, a comercialização, adequação a um propósito específico e não violação.
 >
-> The authors are not responsible for misuse, copyright violations, or any direct, indirect, incidental, or consequential damages arising from the use of this project.
+> Os autores não se responsabilizam por mau uso, violações de direitos autorais ou quaisquer danos diretos, indiretos, incidentais ou consequentes decorrentes do uso deste projeto.
 >
-> By using this repository, you assume full responsibility for any content you access, process, or install.
+> Ao usar este repositório, você assume total responsabilidade por qualquer conteúdo que acessar, processar ou instalar.
