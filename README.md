@@ -32,7 +32,7 @@ This project automates the full data pipeline for Online-Fix game entries:
 > [https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json](https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json)
 >
 > **Steam catalog snapshot**
-> [https://github.com/zKauaFerreira/The-Gaming-Rumble/blob/games/steam_applist_full.json](https://github.com/zKauaFerreira/The-Gaming-Rumble/blob/games/steam_applist_full.json)
+> [https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/steam_applist_full.json](https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/steam_applist_full.json)
 >
 > **Update schedule**
 > The dataset is refreshed automatically every day by GitHub Actions, currently around **18:00 UTC**.
