@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -33,6 +33,7 @@ export default function App() {
   );
   const [activePayload, setActivePayload] = useState<GamePayload | null>(null);
   const [defaultDrive, setDefaultDrive] = useState(() => localStorage.getItem(STORAGE_KEY_DRIVE) ?? "C:\\");
+  const extractionRunKeyRef = useRef<string | null>(null);
 
   const addLog = useCallback((tag: LogEntry["tag"], msg: string) => {
     setDownloadState(prev => prev ? ({
@@ -66,6 +67,12 @@ export default function App() {
   // Effect: Extração Automática (Extract & Destroy)
   useEffect(() => {
     if (downloadState?.phase === "extracting") {
+      const extractionKey = `${downloadState.installPath}::${activePayload?.title ?? ""}`;
+      if (extractionRunKeyRef.current === extractionKey) {
+        return;
+      }
+      extractionRunKeyRef.current = extractionKey;
+
       const runExtraction = async () => {
         try {
           addLog("INFO", "Iniciando varredura e extração dinâmica (Gatling Extract)...");
@@ -93,7 +100,7 @@ export default function App() {
               .catch(e => console.warn("Falha ao criar atalho:", e));
           }
 
-          setDownloadState(prev => prev ? ({ ...prev, phase: "done", progressPercent: 100 }) : null);
+          setDownloadState(prev => prev ? ({ ...prev, phase: "done", progressPercent: 100, extractionPartPercent: 100 }) : null);
           addLog("SUCCESS", "Protocolo Finalizado e Adicionado à Biblioteca.");
         } catch (e) {
           addLog("ERROR", `Falha na Extração: ${e}`);
@@ -101,7 +108,10 @@ export default function App() {
         }
       };
       runExtraction();
+      return;
     }
+
+    extractionRunKeyRef.current = null;
   }, [downloadState?.phase, activePayload?.title, downloadState?.installPath, addLog]);
 
   // Effect: Cronômetro de Download
@@ -139,6 +149,22 @@ export default function App() {
 
   // Restore aria2c listener when downloadState is restored from storage
   useEffect(() => {
+    let disposed = false;
+
+    const consumePendingDeepLink = async () => {
+      try {
+        const pendingUri = await invoke<string | null>("consume_pending_deeplink");
+        if (!disposed && pendingUri) {
+          console.log("[DEEP-LINK] Consuming pending URI:", pendingUri);
+          processUrl(pendingUri);
+        }
+      } catch (error) {
+        console.warn("[DEEP-LINK] Failed to consume pending URI:", error);
+      }
+    };
+
+    void consumePendingDeepLink();
+
     // Deep link from Rust backend
     const unDeep = listen<string>("deeplink", (e) => {
       console.log("[DEEP-LINK] URI received:", e.payload);
@@ -159,8 +185,15 @@ export default function App() {
       setDownloadState(prev => {
         if (!prev) return prev;
         let newState = { ...prev };
+        const isMetadataOnlyStage =
+          log.includes("Downloading 1 item(s)") ||
+          log.includes("BitTorrent: listening on TCP port") ||
+          log.includes("DHT: listening on UDP port") ||
+          log.includes("Download complete: [MEMORY][METADATA]") ||
+          log.includes("FILE:") ||
+          log.includes("(1more)");
 
-        if (progressMatch) {
+        if (progressMatch && !isMetadataOnlyStage) {
           const downloadedVal = parseFloat(progressMatch[1]);
           const downloadedUnit = progressMatch[2];
           const totalVal = parseFloat(progressMatch[3]);
@@ -180,20 +213,25 @@ export default function App() {
             const calculatedPct = Math.min((downloadedMiB / totalMiB) * 100, 100);
             newState.progressPercent = calculatedPct;
             // Auto-complete when download is essentially done (within 1%)
-            if (calculatedPct >= 99.9) {
+            if (calculatedPct >= 99.9 && newState.phase === "downloading") {
               newState.phase = "extracting";
               newState.progressPercent = 100;
             }
           }
         }
+        if (isMetadataOnlyStage && newState.phase === "downloading" && newState.progressPercent <= 0) {
+          newState.progressPercent = 0;
+        }
         if (dlMatch) {
           const speedNum = parseFloat(dlMatch[1]);
           const speedUnit = dlMatch[2];
-          if (speedUnit === "MiB") newState.speedMBs = speedNum;
-          else if (speedUnit === "GiB") newState.speedMBs = speedNum * 1024;
-          else if (speedUnit === "KiB") newState.speedMBs = speedNum / 1024;
+          if (!isMetadataOnlyStage) {
+            if (speedUnit === "MiB") newState.speedMBs = speedNum;
+            else if (speedUnit === "GiB") newState.speedMBs = speedNum * 1024;
+            else if (speedUnit === "KiB") newState.speedMBs = speedNum / 1024;
+          }
         }
-        if (etaMatch) newState.eta = etaMatch[1];
+        if (etaMatch && !isMetadataOnlyStage) newState.eta = etaMatch[1];
         if (cnMatch) newState.peers = parseInt(cnMatch[1]);
         if (sdMatch) newState.seeds = parseInt(sdMatch[1]);
 
@@ -201,7 +239,7 @@ export default function App() {
           console.log(`[aria2c] ${log.replace(/\[\d+m/g, '')}`);
         }
 
-        if (log.includes("Seeding is over")) {
+        if (log.includes("Seeding is over") && newState.phase === "downloading") {
           newState.progressPercent = 100;
           // If fixOnly mode, skip extraction and open folder
           if (newState.fixOnly) {
@@ -215,8 +253,19 @@ export default function App() {
 
         // Detect aria2c failures (timeout, no peers, etc.) — only while downloading
         if (newState.phase === "downloading") {
-          if (log.includes("Stop downloading") || log.includes("not complete") ||
-              log.includes("Exception caught") || log.includes("errorCode=")) {
+          const isDhtTableWarning =
+            log.includes("loading DHT routing table") ||
+            log.includes("Failed to load DHT routing table");
+
+          const isFatalAriaError =
+            log.includes("Stop downloading") ||
+            log.includes("not complete") ||
+            (log.includes("errorCode=") && !isDhtTableWarning) ||
+            log.includes("Failed to establish connection") ||
+            log.includes("No such file or directory") ||
+            (log.includes("Exception") && !isDhtTableWarning);
+
+          if (isFatalAriaError) {
             newState.phase = "error";
             newState.errorMessage = "Torrent indisponível — nenhum seed/peer encontrado.";
             if (log.includes("bt-stop-timeout") || log.includes("not complete") ||
@@ -239,13 +288,21 @@ export default function App() {
         if (!prev) return prev;
 
         if (data.type === "extracting" || data.type === "extracting_fix") {
-          // Reset progress to 0 for extraction, calculate per-file percentage
-          const extractPct = ((data.current - 1) / data.total) * 100; // start of this file
+          const archivePct = typeof data.archive_pct === "number" ? data.archive_pct : 0;
+          const rawGlobalPct = typeof data.global_pct === "string"
+            ? parseFloat(data.global_pct)
+            : typeof data.global_pct === "number"
+              ? data.global_pct
+              : (((data.current - 1) / data.total) * 100);
+          const globalPct = Number.isFinite(rawGlobalPct) ? rawGlobalPct : prev.progressPercent;
 
           return {
             ...prev,
             phase: "extracting" as const,
-            progressPercent: extractPct,
+            currentPart: typeof data.current === "number" ? data.current : prev.currentPart,
+            totalParts: typeof data.total === "number" ? data.total : prev.totalParts,
+            progressPercent: globalPct,
+            extractionPartPercent: archivePct,
             speedMBs: 0,
             eta: "--",
             logs: [...prev.logs, {
@@ -257,11 +314,11 @@ export default function App() {
         }
 
         if (data.type === "cleaning") {
-          return { ...prev, progressPercent: 95, logs: [...prev.logs, { time: new Date().toLocaleTimeString(), tag: "CLEANING" as const, msg: "Limpando arquivos..." }] };
+          return { ...prev, progressPercent: 95, extractionPartPercent: 100, logs: [...prev.logs, { time: new Date().toLocaleTimeString(), tag: "CLEANING" as const, msg: "Limpando arquivos..." }] };
         }
 
         if (data.type === "done") {
-          return { ...prev, progressPercent: 100 };
+          return { ...prev, progressPercent: 100, extractionPartPercent: 100 };
         }
 
         return prev;
@@ -269,6 +326,7 @@ export default function App() {
     });
 
     return () => {
+      disposed = true;
       unDeep.then(f => f());
       unLog.then(f => f());
       unExtract.then(f => f());
@@ -288,6 +346,7 @@ export default function App() {
       currentPart: 0,
       totalParts: activePayload.parts,
       progressPercent: 0,
+      extractionPartPercent: 0,
       speedMBs: 0,
       eta: "0s",
       elapsedTime: "00:00",
@@ -297,6 +356,7 @@ export default function App() {
       seeds: 0,
       fixOnly: false
     });
+    extractionRunKeyRef.current = null;
 
     try { await invoke("add_defender_exclusion", { path }); } catch {}
     try { await invoke("start_torrent", { magnet: activePayload.magnet, installPath: path }); } catch (e: any) {
@@ -317,6 +377,7 @@ export default function App() {
       currentPart: 0,
       totalParts: activePayload.parts,
       progressPercent: 0,
+      extractionPartPercent: 0,
       speedMBs: 0,
       eta: "0s",
       elapsedTime: "00:00",
@@ -326,6 +387,7 @@ export default function App() {
       seeds: 0,
       fixOnly: true
     });
+    extractionRunKeyRef.current = null;
 
     try {
       await invoke("add_defender_exclusion", { path });

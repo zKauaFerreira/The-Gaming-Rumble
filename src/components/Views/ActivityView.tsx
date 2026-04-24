@@ -24,19 +24,34 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
     </div>
   );
 
-  const { payload, progressPercent, speedMBs, eta, elapsedTime, phase, peers, seeds, fixOnly, errorMessage } = state;
+  const {
+    payload,
+    progressPercent,
+    extractionPartPercent,
+    speedMBs,
+    eta,
+    elapsedTime,
+    phase,
+    peers,
+    seeds,
+    fixOnly,
+    errorMessage,
+    currentPart,
+    totalParts
+  } = state;
   const isDone = phase === "done";
   const isExtracting = phase === "extracting";
   const isError = phase === "error";
+  const extractionStatus = isExtracting
+    ? `${fixOnly ? "FIX" : "PARTE"} ${Math.max(currentPart || 0, 1)}/${Math.max(totalParts || 0, 1)} • ${(extractionPartPercent ?? 0).toFixed(0)}%`
+    : null;
 
-  // Determine error type: torrent (no peers, connection) vs extraction (corrupt, bad archive)
   const errorType: "torrent" | "extraction" = errorMessage?.includes("extração") || errorMessage?.includes("extrair")
     ? "extraction"
     : "torrent";
 
   return (
     <main className="flex-1 flex flex-col overflow-hidden relative font-bold uppercase">
-      {/* Header Estilo Setup */}
       <div className="relative w-full h-40 overflow-hidden flex-shrink-0">
         <img src={payload.banner} alt="" className="w-full h-full object-cover opacity-50" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0e0e10]/40 to-[#0e0e10]" />
@@ -44,7 +59,7 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
           <div className="flex items-center gap-2 mb-2">
             <div className={cn("w-1.5 h-1.5 rounded-full", isDone ? "bg-[#4ade80]" : "bg-[#a4e6ff] animate-pulse")} />
             <span className="text-[9px] tracking-[0.4em] text-[#a4e6ff] font-mono">
-              {isDone ? "PROTOCOLO FINALIZADO" : isExtracting ? "REESTRUTURANDO NÚCLEO" : fixOnly ? "TRANSMISSÃO ATIVA (FIX)" : "TRANSMISSÃO ATIVA"}
+              {isDone ? "PROTOCOLO FINALIZADO" : isExtracting ? "REESTRUTURANDO NUCLEO" : fixOnly ? "TRANSMISSAO ATIVA (FIX)" : "TRANSMISSAO ATIVA"}
             </span>
           </div>
           <h1 className="text-4xl font-black tracking-tighter text-[#e5e1e4] leading-none truncate">{payload.title}</h1>
@@ -52,16 +67,20 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
       </div>
 
       <div className="flex-1 px-8 py-6 flex flex-col gap-6 z-10">
-        {/* Progress Display */}
         <div className="flex items-end justify-between mb-1">
           <div>
-             <span className={cn("text-[3.5rem] font-black font-mono leading-none text-glow",
-               isError ? "text-[#ffb4ab]" : "text-[#a4e6ff]")}>
-               {isError ? 'ERRO' : typeof progressPercent === 'number' && progressPercent > 0 ? progressPercent.toFixed(2) : '0.00'}{isError ? '' : '%'}
-             </span>
-             <span className="text-[10px] text-slate-500 tracking-widest ml-4">
-               {isError ? "FALHA NO TORRENT" : isExtracting ? "EXTRAINDO..." : isDone ? "CONCLUÍDO" : isPaused ? "PAUSADO" : typeof progressPercent === 'number' && progressPercent <= 0 ? "PROCESSANDO..." : "BAIXANDO..."}
-             </span>
+            <span className={cn("text-[3.5rem] font-black font-mono leading-none text-glow",
+              isError ? "text-[#ffb4ab]" : "text-[#a4e6ff]")}>
+              {isError ? "ERRO" : typeof progressPercent === "number" && progressPercent > 0 ? progressPercent.toFixed(2) : "0.00"}{isError ? "" : "%"}
+            </span>
+            <span className="text-[10px] text-slate-500 tracking-widest ml-4">
+              {isError ? "FALHA NO TORRENT" : isExtracting ? "EXTRAINDO..." : isDone ? "CONCLUIDO" : isPaused ? "PAUSADO" : typeof progressPercent === "number" && progressPercent <= 0 ? "PROCESSANDO..." : "BAIXANDO..."}
+            </span>
+            {extractionStatus && (
+              <div className="mt-2 text-[10px] text-[#a4e6ff] tracking-[0.2em] font-mono">
+                {extractionStatus}
+              </div>
+            )}
           </div>
           {!isDone && speedMBs > 0 && (
             <div className="flex gap-3">
@@ -71,7 +90,7 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
               </div>
               <div className="bg-[#1b1b1d] px-4 py-2 rounded-xl border border-white/5 flex flex-col items-center min-w-[72px]">
                 <span className="text-[7px] tracking-widest text-slate-500 uppercase">eta</span>
-                <span className="text-sm text-[#a4e6ff] font-mono">{eta ? eta.replace(/(\d+h)/g, '$1 ').replace(/(\d+m)/g, '$1 ').trim() : '--:--'}</span>
+                <span className="text-sm text-[#a4e6ff] font-mono">{eta ? eta.replace(/(\d+h)/g, "$1 ").replace(/(\d+m)/g, "$1 ").trim() : "--:--"}</span>
               </div>
             </div>
           )}
@@ -85,18 +104,17 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
           />
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
           {isError ? (
             <>
               <div className="col-span-2 bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-2xl p-4 flex flex-col gap-1 items-center">
                 <span className="text-[10px] text-[#ffb4ab] tracking-widest uppercase">
-                  {errorType === "extraction" ? "Falha na Extração" : "Torrent Indisponível"}
+                  {errorType === "extraction" ? "Falha na Extracao" : "Torrent Indisponivel"}
                 </span>
                 <span className="text-[8px] text-slate-400">
                   {errorType === "extraction"
-                    ? "Arquivo corrompido ou inválido. Verifique a fonte do magnet link."
-                    : "Nenhum peer/seed disponível. Tente mais tarde."}
+                    ? "Arquivo corrompido ou invalido. Verifique a fonte do magnet link."
+                    : "Nenhum peer/seed disponivel. Tente mais tarde."}
                 </span>
               </div>
               {onCancel && (
@@ -121,7 +139,6 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
           )}
         </div>
 
-        {/* Action Buttons (Somente se não estiver finalizado/erro) */}
         {!isDone && !isError && (
           <div className="mt-auto mb-4 flex gap-4">
             <button onClick={onPause} className="flex-1 h-16 bg-white/[0.03] rounded-2xl border border-white/5 text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-white/[0.08] transition-all group">
@@ -139,8 +156,8 @@ export function ActivityView({ state, onPause, onCancel, onStartGame, isPaused }
               ? "bg-gradient-to-br from-[#a4e6ff] to-[#0188ca] text-[#002d38]"
               : "bg-gradient-to-br from-[#4ade80] to-[#22c55e] text-[#002d13]"
           )}>
-             <span className="tracking-[0.2em] text-xl">{fixOnly ? "ABRIR PASTA" : "INICIAR JOGO"}</span>
-             <Icon name={fixOnly ? "folder_open" : "play_arrow"} size={32} fill={1} />
+            <span className="tracking-[0.2em] text-xl">{fixOnly ? "ABRIR PASTA" : "INICIAR JOGO"}</span>
+            <Icon name={fixOnly ? "folder_open" : "play_arrow"} size={32} fill={1} />
           </button>
         )}
       </div>

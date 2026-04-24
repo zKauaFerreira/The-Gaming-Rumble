@@ -41,6 +41,7 @@ export interface DownloadState {
   currentPart: number;
   totalParts: number;
   progressPercent: number;
+  extractionPartPercent?: number;
   speedMBs: number;
   eta: string;
   elapsedTime: string;

@@ -79,7 +79,7 @@ export function SetupView({ payload, defaultDrive, onStart, onDownloadFixOnly }:
           <div className="bg-[#1b1b1d] p-5 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-2xl">
             <span className="text-[9px] tracking-widest text-slate-500">Partes + 1 Fix</span>
             <span className="text-2xl text-[#e5e1e4] font-mono leading-none tracking-tight">
-              {payload.parts - 1} + 1
+              {payload.parts} + 1
             </span>
           </div>
           <div className="bg-[#1b1b1d] p-5 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-2xl">

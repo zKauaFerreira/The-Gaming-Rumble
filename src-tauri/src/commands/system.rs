@@ -1,5 +1,7 @@
 use std::process::{Command, Stdio};
 use std::path::PathBuf;
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 #[tauri::command]
 pub fn check_is_admin() -> bool {
@@ -270,5 +272,43 @@ if (Test-Path $lnk) {{
     {
         let _ = title;
         Ok(())
+    }
+}
+
+#[tauri::command]
+pub fn shortcut_exists(title: String) -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let safe_title = title.replace('\'', "''");
+        let ps_script = format!(r#"
+$programs = [Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)
+$lnk = Join-Path $programs '{safe_title}.lnk'
+if (Test-Path $lnk) {{
+    Write-Output "true"
+}} else {{
+    Write-Output "false"
+}}
+        "#, safe_title = safe_title);
+
+        let temp_ps = std::env::temp_dir().join("gr_shortcut_exists.ps1");
+        std::fs::write(&temp_ps, &ps_script).ok();
+        let ps_cmd = temp_ps.to_string_lossy().replace('/', "\\");
+
+        let output = Command::new("powershell")
+            .args(["-NoProfile", "-WindowStyle", "Hidden", "-File", &ps_cmd])
+            .creation_flags(0x08000000)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        let _ = std::fs::remove_file(&temp_ps);
+        let exists = String::from_utf8_lossy(&output.stdout).trim().eq_ignore_ascii_case("true");
+        Ok(exists)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = title;
+        Ok(false)
     }
 }

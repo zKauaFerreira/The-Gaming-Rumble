@@ -52,6 +52,47 @@ jobs:
             Write-Output "exists=false" >> $env:GITHUB_OUTPUT
           }
 
+      - name: Build release notes
+        id: release_notes
+        shell: pwsh
+        run: |
+          $outputPath = Join-Path $env:RUNNER_TEMP "release-notes.md"
+          $version = "${{ steps.version.outputs.version }}"
+          $tag = "${{ steps.version.outputs.tag }}"
+          $changelogUrl = "https://github.com/${{ github.repository }}/commits/$tag"
+          $versionNotesPath = ".github/releases/$tag.md"
+          $fallbackNotesPath = ".github/releases/_template.md"
+
+          if (Test-Path $versionNotesPath) {
+            $content = Get-Content $versionNotesPath -Raw
+          } elseif (Test-Path $fallbackNotesPath) {
+            $content = Get-Content $fallbackNotesPath -Raw
+          } else {
+            $content = @"
+# Gaming Rumble {{tag}}
+
+## Resumo
+
+- Atualizacao publicada com binarios para Windows gerados automaticamente pelo CI.
+
+## Instaladores
+
+- **NSIS Installer (`.exe`)**: instalador padrao recomendado para a maioria dos usuarios.
+- **MSI Installer (`.msi`)**: opcao voltada para instalacao corporativa.
+
+## Changelog
+
+- **Changelog completo**: {{changelog_url}}
+"@
+          }
+
+          $content = $content.Replace("{{version}}", $version)
+          $content = $content.Replace("{{tag}}", $tag)
+          $content = $content.Replace("{{changelog_url}}", $changelogUrl)
+
+          Set-Content -Path $outputPath -Value $content -Encoding utf8
+          Write-Output "path=$outputPath" >> $env:GITHUB_OUTPUT
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -74,14 +115,8 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Gaming Rumble ${{ steps.version.outputs.tag }}
-          body: |
-            ### Gaming Rumble ${{ steps.version.outputs.tag }}
-
-            Binários para Windows gerados automaticamente pelo CI.
-
-            - **NSIS Installer**: `.exe` — instalador padrão
-            - **MSI Installer**: `.msi` — instalador corporativo
-          generate_release_notes: true
+          body_path: ${{ steps.release_notes.outputs.path }}
+          generate_release_notes: false
           files: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/nsis/*.exe

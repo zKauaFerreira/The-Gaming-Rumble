@@ -6,9 +6,10 @@
 mod commands;
 
 use std::env::current_exe;
+use std::sync::Mutex;
 use tauri::{Manager, Emitter};
 use commands::{
-    system::{check_is_admin, add_defender_exclusion, create_gaming_rumble_folder, play_game, open_path, update_executable, show_exe_picker, create_shortcut, remove_shortcut},
+    system::{check_is_admin, add_defender_exclusion, create_gaming_rumble_folder, play_game, open_path, update_executable, show_exe_picker, create_shortcut, remove_shortcut, shortcut_exists},
     disk::{list_drives, get_disk_space},
     torrent::{start_torrent, stop_torrent, start_fix_download},
     archive::{extract_game, delete_folder, finalize_installation},
@@ -42,16 +43,37 @@ fn register_deep_link() {
 #[cfg(not(windows))]
 fn register_deep_link() {}
 
+#[derive(Default)]
+struct DeepLinkState {
+    pending_uri: Mutex<Option<String>>,
+}
+
+fn queue_deep_link(app: &tauri::AppHandle, uri: String) {
+    if let Some(state) = app.try_state::<DeepLinkState>() {
+        if let Ok(mut pending_uri) = state.pending_uri.lock() {
+            *pending_uri = Some(uri.clone());
+        }
+    }
+
+    let _ = app.emit("deeplink", &uri);
+}
+
+#[tauri::command]
+fn consume_pending_deeplink(state: tauri::State<'_, DeepLinkState>) -> Option<String> {
+    state.pending_uri.lock().ok().and_then(|mut pending| pending.take())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     register_deep_link();
 
     tauri::Builder::default()
+        .manage(DeepLinkState::default())
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             eprintln!("[SINGLE-INSTANCE] args: {:?}", argv);
             if let Some(uri) = argv.iter().find(|arg| arg.starts_with("gaming-rumble://")) {
                 eprintln!("[DEEP-LINK] URI received: {}", uri);
-                let _ = app.emit("deeplink", uri);
+                queue_deep_link(app, uri.to_string());
             }
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -80,16 +102,18 @@ pub fn run() {
             show_exe_picker,
             update_executable,
             create_shortcut,
-            remove_shortcut
+            remove_shortcut,
+            shortcut_exists,
+            consume_pending_deeplink
         ])
         .setup(|app| {
-            // If launched with deep link, show window and emit deeplink
+            // Keep the deep link queued so the frontend can consume it after mounting.
             if let Some(uri) = std::env::args().find(|a| a.starts_with("gaming-rumble://")) {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
-                let _ = app.emit("deeplink", uri);
+                queue_deep_link(app.handle(), uri);
             }
             Ok(())
         })

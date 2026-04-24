@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::io::{BufReader, Read};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
+use std::cmp::Ordering;
 use sevenz_rust::{decompress_file_with_password, Password};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
@@ -15,6 +17,14 @@ fn dbg(msg: &str) {
 const PASSWORD: &str = "online-fix.me";
 
 static SEVENZ_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct ArchiveSortKey {
+    kind_rank: u8,
+    group_name: String,
+    part_number: Option<u32>,
+    file_name: String,
+}
 
 async fn ensure_7z(app: &AppHandle) -> Option<PathBuf> {
     dbg("ensure_7z called");
@@ -68,17 +78,14 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
     let mut fix_archives: Vec<PathBuf> = Vec::new();
     for archive in &all_archives {
         let lower = archive.to_string_lossy().to_lowercase();
-        if lower.contains(".part")
-            && !lower.contains(".part01.rar") && !lower.contains(".part1.rar") && !lower.contains(".part001.rar")
-        { continue; }
         if lower.contains("fix") || lower.contains("repair") {
             fix_archives.push(archive.clone());
         } else {
             game_archives.push(archive.clone());
         }
     }
-    game_archives.sort();
-    fix_archives.sort();
+    game_archives.sort_by(compare_archives);
+    fix_archives.sort_by(compare_archives);
 
     let total_jobs = game_archives.len() + fix_archives.len();
     log_tag(LogLevel::INFO, "EXTRACT", format!("{} arquivo(s) de jogo e {} fix", game_archives.len(), fix_archives.len()));
@@ -168,6 +175,62 @@ pub async fn extract_game(app: AppHandle, install_path: String) -> Result<(), St
     Ok(())
 }
 
+fn compare_archives(a: &PathBuf, b: &PathBuf) -> Ordering {
+    let a_key = archive_sort_key(a);
+    let b_key = archive_sort_key(b);
+
+    a_key.kind_rank.cmp(&b_key.kind_rank)
+        .then_with(|| a_key.group_name.cmp(&b_key.group_name))
+        .then_with(|| a_key.part_number.unwrap_or(0).cmp(&b_key.part_number.unwrap_or(0)))
+        .then_with(|| a_key.file_name.cmp(&b_key.file_name))
+}
+
+fn archive_sort_key(path: &Path) -> ArchiveSortKey {
+    let file_name = path.file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let lower_name = file_name.to_lowercase();
+
+    if let Some((group_name, part_number)) = parse_multi_part_info(&lower_name) {
+        return ArchiveSortKey {
+            kind_rank: 0,
+            group_name,
+            part_number: Some(part_number),
+            file_name: lower_name,
+        };
+    }
+
+    ArchiveSortKey {
+        kind_rank: 1,
+        group_name: lower_name.clone(),
+        part_number: None,
+        file_name: lower_name,
+    }
+}
+
+fn parse_multi_part_info(file_name: &str) -> Option<(String, u32)> {
+    let lower = file_name.to_lowercase();
+    let dot_part = lower.find(".part")?;
+    let part_digits_start = dot_part + 5;
+    let digits: String = lower[part_digits_start..]
+        .chars()
+        .take_while(|ch| ch.is_ascii_digit())
+        .collect();
+
+    if digits.is_empty() {
+        return None;
+    }
+
+    let part_number = digits.parse::<u32>().ok()?;
+    let group_name = format!(
+        "{}{}",
+        &lower[..dot_part],
+        &lower[part_digits_start + digits.len()..]
+    );
+
+    Some((group_name, part_number))
+}
+
 /// Try system 7z first, fallback to sevenz-rust
 async fn extract_rust_or_7z(app: &AppHandle, archive: &Path, out_dir: &str) -> Result<(), String> {
     if let Some(sevenz) = ensure_7z(app).await {
@@ -175,17 +238,42 @@ async fn extract_rust_or_7z(app: &AppHandle, archive: &Path, out_dir: &str) -> R
             archive.file_name().unwrap_or_default().to_string_lossy()));
 
         let output = Command::new(&sevenz)
-            .args(&["x", &archive.to_string_lossy(), &format!("-o{}", out_dir), &format!("-p{}", PASSWORD), "-y"])
+            .args(&[
+                "x",
+                &archive.to_string_lossy(),
+                &format!("-o{}", out_dir),
+                &format!("-p{}", PASSWORD),
+                "-y",
+                "-bb1",
+                "-bso1",
+                "-bsp1",
+            ])
             .creation_flags(0x08000000)
-            .stdout(Stdio::null())
+            .stdout(Stdio::piped())
             .stderr(Stdio::null())
-            .output();
+            .spawn();
 
-        if let Ok(out) = output {
-            if out.status.success() {
+        if let Ok(mut child) = output {
+            let mut progress_output = String::new();
+            if let Some(stdout) = child.stdout.take() {
+                let mut reader = BufReader::new(stdout);
+                let _ = reader.read_to_string(&mut progress_output);
+            }
+
+            let status = child.wait().map_err(|e| e.to_string())?;
+
+            if status.success() {
                 return Ok(());
             }
-            log_tag(LogLevel::INFO, "EXTRACT", format!("7-Zip falhou (exit {}), tentando sevenz-rust", out.status.code().unwrap_or(-1)));
+
+            log_tag(
+                LogLevel::INFO,
+                "EXTRACT",
+                format!("7-Zip falhou (exit {}), tentando sevenz-rust", status.code().unwrap_or(-1))
+            );
+            if !progress_output.trim().is_empty() {
+                log_tag(LogLevel::DEBUG, "EXTRACT", progress_output);
+            }
         }
     }
 
@@ -211,19 +299,155 @@ async fn run_extract_with_progress(
 
     std::fs::create_dir_all(out_dir).map_err(|e| e.to_string())?;
 
-    extract_rust_or_7z(app, archive, &out_dir.to_string_lossy())
-        .await
-        .map_err(|e| format!("Falha ao extrair {} (erro: {})", file_name, e))?;
+    if let Some(sevenz) = ensure_7z(app).await {
+        extract_with_7z_progress(
+            &sevenz,
+            archive,
+            out_dir,
+            app,
+            pct_start,
+            pct_end,
+            current,
+            total,
+            label,
+            file_name,
+        ).await.map_err(|e| format!("Falha ao extrair {} (erro: {})", file_name, e))?;
+    } else {
+        extract_rust_or_7z(app, archive, &out_dir.to_string_lossy())
+            .await
+            .map_err(|e| format!("Falha ao extrair {} (erro: {})", file_name, e))?;
+    }
 
     let _ = app.emit("extract-progress", serde_json::json!({
         "type": label,
         "file": file_name,
         "current": current,
         "total": total,
+        "archive_pct": 100.0,
         "global_pct": format!("{:.1}", pct_end)
     }));
 
     Ok(())
+}
+
+async fn extract_with_7z_progress(
+    sevenz: &Path,
+    archive: &Path,
+    out_dir: &Path,
+    app: &AppHandle,
+    pct_start: f64,
+    pct_end: f64,
+    current: usize,
+    total: usize,
+    label: &str,
+    file_name: &str,
+) -> Result<(), String> {
+    let mut cmd = Command::new(sevenz);
+    cmd.args(&[
+        "x",
+        &archive.to_string_lossy(),
+        &format!("-o{}", out_dir.to_string_lossy()),
+        &format!("-p{}", PASSWORD),
+        "-y",
+        "-bb1",
+        "-bso1",
+        "-bsp1",
+    ]);
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+
+    let mut child = cmd
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    if let Some(stdout) = child.stdout.take() {
+        let mut reader = BufReader::new(stdout);
+        let mut buffer = [0u8; 1024];
+        let mut pending = String::new();
+        let mut last_percent = 0.0f64;
+
+        loop {
+            let read = reader.read(&mut buffer).map_err(|e| e.to_string())?;
+            if read == 0 {
+                break;
+            }
+
+            pending.push_str(&String::from_utf8_lossy(&buffer[..read]));
+
+            while let Some(split_idx) = pending.find(['\r', '\n']) {
+                let line = pending[..split_idx].trim().to_string();
+                let delimiter_len = pending[split_idx..]
+                    .chars()
+                    .take_while(|ch| *ch == '\r' || *ch == '\n')
+                    .count();
+                pending.drain(..split_idx + delimiter_len);
+
+                if let Some(percent) = parse_7z_percent(&line) {
+                    last_percent = percent;
+                    emit_extract_progress(app, label, file_name, current, total, pct_start, pct_end, percent);
+                }
+            }
+        }
+
+        let trailing = pending.trim();
+        if let Some(percent) = parse_7z_percent(trailing) {
+            last_percent = percent;
+        }
+
+        if last_percent < 100.0 {
+            emit_extract_progress(app, label, file_name, current, total, pct_start, pct_end, last_percent);
+        }
+    }
+
+    let status = child.wait().map_err(|e| e.to_string())?;
+    if !status.success() {
+        return Err(format!("7-Zip retornou codigo {}", status.code().unwrap_or(-1)));
+    }
+
+    Ok(())
+}
+
+fn emit_extract_progress(
+    app: &AppHandle,
+    label: &str,
+    file_name: &str,
+    current: usize,
+    total: usize,
+    pct_start: f64,
+    pct_end: f64,
+    archive_pct: f64,
+) {
+    let clamped_pct = archive_pct.clamp(0.0, 100.0);
+    let global_pct = pct_start + ((pct_end - pct_start) * (clamped_pct / 100.0));
+
+    let _ = app.emit("extract-progress", serde_json::json!({
+        "type": label,
+        "file": file_name,
+        "current": current,
+        "total": total,
+        "archive_pct": clamped_pct,
+        "global_pct": format!("{:.1}", global_pct)
+    }));
+}
+
+fn parse_7z_percent(line: &str) -> Option<f64> {
+    let trimmed = line.trim_start();
+    let digits: String = trimmed.chars()
+        .take_while(|ch| ch.is_ascii_digit())
+        .collect();
+
+    if digits.is_empty() {
+        return None;
+    }
+
+    let remainder = &trimmed[digits.len()..];
+    if !remainder.starts_with('%') {
+        return None;
+    }
+
+    digits.parse::<f64>().ok()
 }
 
 /// Walk down a chain of nested dirs where subdir name matches parent name.
