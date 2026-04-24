@@ -68,22 +68,22 @@ jobs:
           } elseif (Test-Path $fallbackNotesPath) {
             $content = Get-Content $fallbackNotesPath -Raw
           } else {
-            $content = @"
-# Gaming Rumble {{tag}}
-
-## Resumo
-
-- Atualizacao publicada com binarios para Windows gerados automaticamente pelo CI.
-
-## Instaladores
-
-- **NSIS Installer (`.exe`)**: instalador padrao recomendado para a maioria dos usuarios.
-- **MSI Installer (`.msi`)**: opcao voltada para instalacao corporativa.
-
-## Changelog
-
-- **Changelog completo**: {{changelog_url}}
-"@
+            $content = @(
+              "# Gaming Rumble {{tag}}",
+              "",
+              "## Resumo",
+              "",
+              "- Atualizacao publicada com binarios para Windows gerados automaticamente pelo CI.",
+              "",
+              "## Instaladores",
+              "",
+              "- **NSIS Installer (`.exe`)**: instalador padrao recomendado para a maioria dos usuarios.",
+              "- **MSI Installer (`.msi`)**: opcao voltada para instalacao corporativa.",
+              "",
+              "## Changelog",
+              "",
+              "- **Changelog completo**: {{changelog_url}}"
+            ) -join [Environment]::NewLine
           }
 
           $content = $content.Replace("{{version}}", $version)
