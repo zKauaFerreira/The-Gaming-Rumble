@@ -1,0 +1,22 @@
+{
+  "repo": "zKauaFerreira/The-Gaming-Rumble",
+  "branch": "games",
+  "raw_base_url": "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/games/torrents/",
+  "total_games": 1698,
+  "online_fix_total": 1698,
+  "steam_with_metadata": 1588,
+  "steam_without_metadata": 110,
+  "match_rate": 93.52,
+  "success_rate": 93.52,
+  "online_fix_pages_total": 89,
+  "pages_scraped_target": 89,
+  "pages_present_in_json": 89,
+  "last_page_in_json": 89,
+  "new_games_found_this_run": 1837,
+  "processed_games_this_run": 1698,
+  "torrent_files_total": 1698,
+  "json_entries_with_torrent": 1698,
+  "last_scrape_at": "2026-04-25 19:27:03",
+  "last_game_update": "2026-04-24T16:35:57+03:00",
+  "generated_at": "2026-04-25 19:27:04"
+}
