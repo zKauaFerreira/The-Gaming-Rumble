@@ -1,0 +1,30 @@
+{
+  "positive": [
+    ["Godfall", "Godfall Ultimate Edition"],
+    ["Hammerwatch II", "Hammerwatch II"],
+    ["RAID World War II", "RAID: World War II"],
+    ["Demeo PC Edition", "Demeo"],
+    ["Lets Cook", "Let's Cook"],
+    ["Hasbros BATTLESHIP", "Hasbro's BATTLESHIP"],
+    ["Tiny Tinas Wonderlands", "Tiny Tina's Wonderlands"],
+    ["Remnant II", "REMNANT II®"],
+    ["Teenage Mutant Ninja Turtles Shredders Revenge", "Teenage Mutant Ninja Turtles: Shredder's Revenge"],
+    ["Torchlight III", "Torchlight III"],
+    ["Ultra Street Fighter IV", "Ultra Street Fighter® IV"],
+    ["SOULCALIBUR VI", "SOULCALIBUR VI"],
+    ["BROKE PROTOCOL Online City RPG", "BROKE PROTOCOL"],
+    ["Gods Trigger", "God's Trigger"]
+  ],
+  "negative": [
+    ["Titan Quest II", "EVAN QUEST 2"],
+    ["DARK SOULS III", "Dark Quest 3"],
+    ["Project CARS 2", "Project Lazarus 2"],
+    ["Project CARS", "PROJECT"],
+    ["Total War WARHAMMER II", "Total War: SHOGUN 2"],
+    ["Age of Empires II", "Conquest of Empires 2"],
+    ["Halo Wars 2", "Wasp Wars 2"],
+    ["Galactic Civilizations IV", "4 Civilizations"],
+    ["Project Arrhythmia", "ボク姫PROJECT"],
+    ["Resident Evil Resistance", "Resident Evil"]
+  ]
+}

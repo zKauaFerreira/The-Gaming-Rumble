@@ -11,6 +11,7 @@ except ImportError:
     pass  # no Actions não precisa, usa env vars nativas
 
 import random
+import math
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -30,6 +31,10 @@ import os
 import time
 from datetime import datetime
 from rapidfuzz import fuzz  # Para matching de strings
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 # ==========================================
 # CONFIGURAÇÕES — via env vars no GitHub Actions
@@ -76,6 +81,8 @@ class OnlineFixScraper:
 
         self.session.headers.update(HEADERS)
         self.logged_in = False
+        self._match_guard = self._load_match_guard_model()
+        self._match_aliases = self._load_match_guard_aliases()
 
         # Gerenciador de Proxy
         self.proxies_list = []
@@ -215,10 +222,15 @@ class OnlineFixScraper:
             for app in exact_candidates:
                 # Apply semantic checks even to exact matches
                 candidate_name = app['name']
+                if self._is_canonical_steam_match(original_name, candidate_name):
+                    exact_match = app.copy()
+                    exact_match['score'] = 100
+                    result.append(exact_match)
+                    continue
 
                 # Check if keywords are semantically related
                 query_parts = set(normalized_query.split())
-                candidate_parts = set(candidate_name.split())
+                candidate_parts = set(self._normalize(candidate_name).split())
 
                 common_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
                                "of", "with", "by", "is", "are", "was", "were", "be", "been", "being",
@@ -246,12 +258,7 @@ class OnlineFixScraper:
                 regular_ratio = fuzz.ratio(normalized_query, self._normalize(candidate_name))
 
                 base_fuzzy_score = (0.6 * token_score) + (0.25 * regular_ratio) + (0.15 * partial_score * 0.5)
-
-                # Apply weighted scoring using the local function
-                query_number = self._extract_number(original_name)
-                query_year = self._extract_year(original_name)
-
-                final_score = weighted_score(candidate_name, base_fuzzy_score, query_number, query_year)
+                final_score = min(base_fuzzy_score, 100)
 
                 if final_score >= 0:  # Only add if not rejected by language check
                     exact_match['score'] = final_score
@@ -297,11 +304,8 @@ class OnlineFixScraper:
             candidate_keywords = set(self._meaningful_tokens(candidate_name))
             query_text_tokens = set(self._textual_tokens(original_name))
             candidate_text_tokens = set(self._textual_tokens(candidate_name))
-            query_distinctive_tokens = set(self._distinctive_tokens(original_name))
-            candidate_distinctive_tokens = set(self._distinctive_tokens(candidate_name))
             keyword_overlap = len(query_keywords.intersection(candidate_keywords))
             text_overlap = len(query_text_tokens.intersection(candidate_text_tokens))
-            distinctive_overlap = len(query_distinctive_tokens.intersection(candidate_distinctive_tokens))
 
             if query_text_tokens and not candidate_text_tokens and normalized_query != self._normalize(candidate_name):
                 return -100
@@ -309,15 +313,11 @@ class OnlineFixScraper:
                 return -100
             if len(query_keywords) >= 2 and keyword_overlap == 0:
                 return -100
-            if query_distinctive_tokens and distinctive_overlap == 0:
-                return -100
-            if len(query_distinctive_tokens) >= 2 and distinctive_overlap < len(query_distinctive_tokens):
-                score -= 18
 
             if query_keywords and candidate_keywords:
                 keyword_similarity = keyword_overlap / max(len(query_keywords), len(candidate_keywords))
                 if keyword_similarity < 0.34:
-                    score -= 25
+                    score -= 14
 
             cand_num = self._extract_number(candidate_name)
             cand_numbers = self._extract_numbers(candidate_name)
@@ -350,7 +350,7 @@ class OnlineFixScraper:
                 score -= 10
 
             if len(query_text_tokens) >= 2 and text_overlap < max(1, len(query_text_tokens) // 2):
-                score -= 15
+                score -= 10
 
             if len(self._normalize(candidate_name)) <= 2 and len(normalized_query) > 4:
                 return -100
@@ -699,6 +699,354 @@ class OnlineFixScraper:
             if len(token) >= 3 and token not in generic_tokens
         ]
 
+    def _load_match_guard_model(self):
+        model_path = os.path.join('tools', 'match_guard_model.json')
+        if not os.path.exists(model_path):
+            return None
+        try:
+            return self._load_json_file(model_path)
+        except Exception as e:
+            print(f"⚠️ Falha ao carregar match_guard_model.json: {e}")
+            return None
+
+    def _load_match_guard_aliases(self):
+        alias_path = os.path.join('tools', 'match_guard_aliases.json')
+        if not os.path.exists(alias_path):
+            return {}
+        try:
+            data = self._load_json_file(alias_path)
+            return data if isinstance(data, dict) else {}
+        except Exception as e:
+            print(f"⚠️ Falha ao carregar match_guard_aliases.json: {e}")
+            return {}
+
+    def _resolve_alias_candidate(self, title):
+        if not self._match_aliases or not self._steam_catalog:
+            return None
+        normalized_title = self._guard_normalize(title)
+        alias_target = self._match_aliases.get(normalized_title)
+        if not alias_target:
+            return None
+        normalized_target = self._normalize(alias_target)
+        for app in self._steam_catalog:
+            if self._normalize(app['name']) == normalized_target:
+                candidate = {
+                    "id": app["appid"],
+                    "name": app["name"],
+                    "score": 100
+                }
+                return candidate
+        return None
+
+    def _guard_normalize(self, text):
+        text = (text or "").lower()
+        text = text.replace("’", "").replace("'", "").replace("`", "")
+        text = text.replace("™", " ").replace("®", " ").replace("©", " ")
+        text = re.sub(r"[':!?,.%&()+\[\]{}|/\\-]+", " ", text)
+        return re.sub(r'\s+', ' ', text).strip()
+
+    def _guard_remove_trailing_descriptors(self, text):
+        reduced = self._guard_normalize(text)
+        patterns = [
+            r"\s+ultimate edition$",
+            r"\s+definitive edition$",
+            r"\s+complete edition$",
+            r"\s+digital edition$",
+            r"\s+enhanced edition$",
+            r"\s+anniversary edition$",
+            r"\s+legacy collection$",
+            r"\s+classic collection$",
+            r"\s+director'?s cut$",
+            r"\s+directors cut$",
+            r"\s+pc edition$",
+            r"\s+hd remaster$",
+            r"\s+remaster(?:ed)?$",
+            r"\s+redux$",
+            r"\s+reloaded$",
+            r"\s+ultimate$",
+            r"\s+definitive$",
+            r"\s+enhanced$",
+        ]
+        changed = True
+        while changed and reduced:
+            changed = False
+            for pattern in patterns:
+                updated = re.sub(pattern, "", reduced).strip()
+                if updated != reduced:
+                    reduced = updated
+                    changed = True
+        return reduced
+
+    def _guard_descriptor_stripped_match(self, query, candidate):
+        q_stripped = self._guard_remove_trailing_descriptors(query)
+        c_stripped = self._guard_remove_trailing_descriptors(candidate)
+        return (
+            bool(q_stripped)
+            and bool(c_stripped)
+            and (
+                q_stripped == c_stripped
+                or q_stripped == self._guard_normalize(candidate)
+                or c_stripped == self._guard_normalize(query)
+            )
+        )
+
+    def _guard_textual_tokens(self, text):
+        return re.findall(r"[a-z0-9]+", self._guard_normalize(text))
+
+    def _guard_stem_token(self, token):
+        if token.endswith('ies') and len(token) > 4:
+            return token[:-3] + 'y'
+        if token.endswith('bros') and len(token) > 4:
+            return token[:-1]
+        if token.endswith('s') and len(token) > 3 and not token.endswith(('ss', 'us', 'is', 'os')):
+            return token[:-1]
+        return token
+
+    def _guard_descriptor_tokens(self):
+        return {
+            "edition", "editions", "game", "games", "vr", "online", "simulator", "digital",
+            "collection", "ultimate", "definitive", "complete", "remastered", "remaster",
+            "enhanced", "director", "directors", "cut", "beta", "alpha", "demo", "pc",
+            "hd", "bundle", "pack", "deluxe", "anniversary", "redux", "reloaded",
+            "multiplayer", "coop", "co", "op", "goty", "city", "rpg", "mode", "version",
+            "launch", "steam", "store", "full", "s"
+        }
+
+    def _guard_meaningful_tokens(self, text):
+        descriptor_tokens = self._guard_descriptor_tokens()
+        tokens = []
+        for token in self._guard_textual_tokens(text):
+            if len(token) < 2:
+                continue
+            if token in descriptor_tokens:
+                continue
+            tokens.append(token)
+        return tokens
+
+    def _guard_canonical_tokens(self, text, drop_descriptors=False):
+        descriptor_tokens = self._guard_descriptor_tokens()
+        roman_tokens = {"i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv", "xv", "xvi"}
+        common_tokens = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "is", "are", "was", "were", "be", "been", "being"}
+        tokens = []
+        for token in self._guard_textual_tokens(text):
+            if token in common_tokens:
+                continue
+            if drop_descriptors and token in descriptor_tokens:
+                continue
+            token = self._guard_stem_token(token)
+            if len(token) < 2 and not token.isdigit() and token not in roman_tokens:
+                continue
+            tokens.append(token)
+        return tokens
+
+    def _guard_extract_numbers(self, text):
+        roman_values = {
+            "i": 1, "ii": 2, "iii": 3, "iv": 4, "v": 5, "vi": 6, "vii": 7, "viii": 8,
+            "ix": 9, "x": 10, "xi": 11, "xii": 12, "xiii": 13, "xiv": 14, "xv": 15, "xvi": 16
+        }
+        numbers = [int(x) for x in re.findall(r"\b\d{1,4}\b", text or "")]
+        romans = [roman_values[token] for token in self._guard_textual_tokens(text) if token in roman_values]
+        return sorted(set(numbers + romans))
+
+    def _guard_extract_year(self, text):
+        years = [int(x) for x in re.findall(r"\b(19\d{2}|20\d{2})\b", text or "")]
+        return years[0] if years else None
+
+    def _guard_jaccard(self, a, b):
+        sa, sb = set(a), set(b)
+        if not sa and not sb:
+            return 1.0
+        if not sa or not sb:
+            return 0.0
+        return len(sa & sb) / len(sa | sb)
+
+    def _guard_overlap_fraction(self, source, target):
+        source_set, target_set = set(source), set(target)
+        if not source_set:
+            return 1.0
+        return len(source_set & target_set) / len(source_set)
+
+    def _guard_franchise_key(self, text):
+        core = self._guard_canonical_tokens(text, drop_descriptors=True)
+        key_tokens = []
+        roman_tokens = {"i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv", "xv", "xvi"}
+        for token in core:
+            if token.isdigit() or token in roman_tokens:
+                continue
+            key_tokens.append(token)
+            if len(key_tokens) >= 2:
+                break
+        return " ".join(key_tokens)
+
+    def _guard_sequence_conflict(self, query, candidate):
+        query_numbers = self._guard_extract_numbers(query)
+        candidate_numbers = self._guard_extract_numbers(candidate)
+        if not query_numbers or not candidate_numbers:
+            return False
+        query_key = self._guard_franchise_key(query)
+        candidate_key = self._guard_franchise_key(candidate)
+        return bool(query_key) and query_key == candidate_key and query_numbers != candidate_numbers
+
+    def _guard_feature_vector(self, query, candidate):
+        q_norm = self._guard_normalize(query)
+        c_norm = self._guard_normalize(candidate)
+        q_tokens = self._guard_textual_tokens(query)
+        c_tokens = self._guard_textual_tokens(candidate)
+        q_meaning = self._guard_meaningful_tokens(query)
+        c_meaning = self._guard_meaningful_tokens(candidate)
+        q_dist = [tok for tok in q_meaning if len(tok) >= 4]
+        c_dist = [tok for tok in c_meaning if len(tok) >= 4]
+        q_numbers = self._guard_extract_numbers(query)
+        c_numbers = self._guard_extract_numbers(candidate)
+        q_year = self._guard_extract_year(query)
+        c_year = self._guard_extract_year(candidate)
+        q_core = self._guard_canonical_tokens(query, drop_descriptors=True)
+        c_core = self._guard_canonical_tokens(candidate, drop_descriptors=True)
+        q_all_canon = self._guard_canonical_tokens(query, drop_descriptors=False)
+        c_all_canon = self._guard_canonical_tokens(candidate, drop_descriptors=False)
+        q_compact = ''.join(q_tokens)
+        c_compact = ''.join(c_tokens)
+        return [
+            fuzz.token_set_ratio(q_norm, c_norm) / 100.0,
+            fuzz.token_sort_ratio(q_norm, c_norm) / 100.0,
+            fuzz.ratio(q_norm, c_norm) / 100.0,
+            fuzz.partial_ratio(q_norm, c_norm) / 100.0,
+            1.0 if q_norm == c_norm else 0.0,
+            1.0 if q_compact == c_compact else 0.0,
+            1.0 if q_norm in c_norm and q_norm != c_norm else 0.0,
+            1.0 if c_norm in q_norm and q_norm != c_norm else 0.0,
+            1.0 if self._guard_descriptor_stripped_match(query, candidate) else 0.0,
+            1.0 if q_core and q_core == c_core else 0.0,
+            1.0 if q_all_canon and q_all_canon == c_all_canon else 0.0,
+            self._guard_jaccard(q_tokens, c_tokens),
+            self._guard_jaccard(q_meaning, c_meaning),
+            self._guard_jaccard(q_dist, c_dist),
+            self._guard_jaccard(q_core, c_core),
+            self._guard_overlap_fraction(q_meaning, c_meaning),
+            self._guard_overlap_fraction(q_dist, c_dist),
+            self._guard_overlap_fraction(q_core, c_core),
+            1.0 if q_numbers == c_numbers and q_numbers else 0.0,
+            1.0 if q_numbers and c_numbers and q_numbers != c_numbers else 0.0,
+            1.0 if self._guard_sequence_conflict(query, candidate) else 0.0,
+            1.0 if not q_numbers else 0.0,
+            1.0 if not c_numbers else 0.0,
+            1.0 if q_year == c_year and q_year is not None else 0.0,
+            1.0 if q_year is not None and c_year is not None and q_year != c_year else 0.0,
+            1.0 if self._guard_franchise_key(query) and self._guard_franchise_key(query) == self._guard_franchise_key(candidate) else 0.0,
+            abs(len(q_norm) - len(c_norm)) / max(1, max(len(q_norm), len(c_norm))),
+            float(len(set(q_tokens) & set(c_tokens))),
+            float(len(set(q_dist) & set(c_dist))),
+            float(len([tok for tok in c_core if tok not in q_core])),
+            float(len([tok for tok in q_core if tok not in c_core]))
+        ]
+
+    def _guard_sigmoid(self, value):
+        if value >= 0:
+            z = math.exp(-value)
+            return 1.0 / (1.0 + z)
+        z = math.exp(value)
+        return z / (1.0 + z)
+
+    def _guard_probability(self, query, candidate):
+        if not self._match_guard:
+            return 0.0
+        weights = self._match_guard.get("weights", [])
+        bias = self._match_guard.get("bias", 0.0)
+        features = self._guard_feature_vector(query, candidate)
+        score = bias
+        for weight, feature in zip(weights, features):
+            score += weight * feature
+        return self._guard_sigmoid(score)
+
+    def _is_canonical_steam_match(self, query, candidate):
+        query_core = self._guard_canonical_tokens(query, drop_descriptors=True)
+        candidate_core = self._guard_canonical_tokens(candidate, drop_descriptors=True)
+        return bool(query_core) and query_core == candidate_core
+
+    def _pick_guarded_candidate(self, title, candidates):
+        accepted = []
+        for candidate in candidates[:5]:
+            name = candidate['name']
+            score = candidate['score']
+            if self._guard_sequence_conflict(title, name):
+                continue
+            canonical = self._is_canonical_steam_match(title, name)
+            guard_prob = self._guard_probability(title, name)
+            query_core = self._guard_canonical_tokens(title, drop_descriptors=True)
+            candidate_core = self._guard_canonical_tokens(name, drop_descriptors=True)
+            core_overlap = self._guard_overlap_fraction(query_core, candidate_core)
+            extra_candidate_tokens = [token for token in candidate_core if token not in query_core]
+
+            if canonical and score >= 55:
+                accepted.append((3, 0.999, score, candidate))
+                continue
+
+            if guard_prob >= 0.72 and score >= 72:
+                accepted.append((2, guard_prob, score, candidate))
+                continue
+
+            if score >= 90 and guard_prob >= 0.18 and core_overlap >= 0.5 and (not extra_candidate_tokens or guard_prob >= 0.45):
+                accepted.append((1, guard_prob, score, candidate))
+
+        if not accepted:
+            return None
+
+        accepted.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
+        return accepted[0][3]
+
+    def _record_low_confidence_match(self, title, candidate, reason, probability=None, score=None):
+        path = 'low_confidence_matches.json'
+        entry = {
+            "title": title,
+            "candidate": candidate,
+            "reason": reason,
+            "probability": round(probability, 4) if probability is not None else None,
+            "score": round(score, 1) if score is not None else None,
+            "logged_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        try:
+            payload = []
+            if os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    payload = json.load(f)
+                    if not isinstance(payload, list):
+                        payload = []
+            payload.append(entry)
+            payload = payload[-500:]
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(payload, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+    def _proxy_log_icon(self):
+        return "🌐" if self.proxies_list else "🏠"
+
+    def _memory_usage_mb(self):
+        try:
+            if psutil is None:
+                return 0
+            return int(psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024))
+        except Exception:
+            return 0
+
+    def _format_game_log_line(self, current_idx, total, name, page_num, torrent_ok, steam_ok, latency_ms, reason):
+        icon = "✅" if torrent_ok and steam_ok else "❌"
+        torrent_status = "OK" if torrent_ok else "!!"
+        steam_status = "OK" if steam_ok else "!!"
+        safe_reason = (reason or "OK")[:18]
+        return (
+            f"{icon} "
+            f"[{current_idx:04d}/{total:04d}] "
+            f"| {name[:25]:<25} "
+            f"| T:{torrent_status} S:{steam_status} "
+            f"| {latency_ms:>4}ms "
+            f"| P:{page_num:03d} "
+            f"| {self._proxy_log_icon()} "
+            f"| M:{self._memory_usage_mb():>4}MB "
+            f"| {safe_reason:<18} "
+            f"| {datetime.now().strftime('%H:%M:%S')}"
+        )
+
     def _get_importance_weight(self, word):
         """Retorna peso de importância para uma palavra (palavras comuns têm peso menor)"""
         common_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
@@ -745,7 +1093,7 @@ class OnlineFixScraper:
                 result.append(x_stripped)
         return result  # Retornar todas as variações possíveis (menos restrições)
 
-    def _steam_request(self, url, params=None, max_retries=5):  # Reduzi número de tentativas
+    def _steam_request(self, url, params=None, max_retries=5, verbose=False):  # Reduzi número de tentativas
         """Helper para requisições ao Steam com Rotação de Proxies e retentativa."""
         for attempt in range(max_retries):
             # Puxa um proxy novo para cada tentativa
@@ -756,7 +1104,8 @@ class OnlineFixScraper:
 
                 if r.status_code == 429:
                     wait = 60 * (attempt + 1)  # Aumentei significativamente o wait
-                    print(f"    [Steam Block] Aguardando {wait}s... (Tentativa {attempt+1}/{max_retries})")
+                    if verbose:
+                        print(f"    [Steam Block] Aguardando {wait}s... (Tentativa {attempt+1}/{max_retries})")
                     time.sleep(wait)
                     continue
 
@@ -765,7 +1114,8 @@ class OnlineFixScraper:
 
                 return r.json()
             except Exception as e:
-                print(f"    Erro na requisição Steam (tentativa {attempt+1}): {e}")
+                if verbose:
+                    print(f"    Erro na requisição Steam (tentativa {attempt+1}): {e}")
                 time.sleep(2)  # Maior delay entre tentativas
         return None
 
@@ -912,7 +1262,7 @@ class OnlineFixScraper:
 
         return stats
 
-    def get_steam_data(self, title):
+    def get_steam_data(self, title, verbose=False):
         """Obtém metadados da Steam usando catálogo local (offline, zero rate limit)."""
         # Normalização
         clean = self._normalize(re.sub(r'\s*по сети\s*', '', title, flags=re.I).strip())
@@ -930,47 +1280,53 @@ class OnlineFixScraper:
         if not catalog_matches:
             return {"not_found": True, "reason": "not_on_steam", "search_url": base_search_url}, base_search_url
 
-        # 3. Pegar melhor match
-        best = catalog_matches[0]
+        alias_candidate = self._resolve_alias_candidate(title)
+        if alias_candidate:
+            best = alias_candidate
+        else:
+        # 3. Pegar melhor match com canonicalização + guard model
+            best = self._pick_guarded_candidate(title, catalog_matches)
+            if not best:
+                fallback = catalog_matches[0]
+                fallback_prob = self._guard_probability(title, fallback['name'])
+                self._record_low_confidence_match(title, fallback['name'], "low_confidence", fallback_prob, fallback['score'])
+                if verbose:
+                    print(f"    ⚠️ Score baixo ({fallback['score']:.1f}) para '{title}' → '{fallback['name']}'. Rejeitando.")
+                return {"not_found": True, "reason": "low_confidence", "search_url": base_search_url}, base_search_url
+
         appid = best['id']
         match_score = best['score']
-
-        # 4. Threshold de confiança ajustado para evitar correspondências ruins
-        if match_score < 85:  # Ajustado para permitir matches legítimos com pequenas variações enquanto evita matches ruins
-            print(f"    ⚠️ Score baixo ({match_score:.1f}) para '{title}' → '{best['name']}'. Rejeitando.")
-            return {"not_found": True, "reason": "low_confidence", "search_url": base_search_url}, base_search_url
-
-        # 5. Verificação adicional para jogos de séries conhecidas
-        # Certificar que palavras-chave principais estão presentes
-        if match_score < 88:
-            print(f"    âš ï¸ Score baixo ({match_score:.1f}) para '{title}' â†’ '{best['name']}'. Rejeitando.")
-            return {"not_found": True, "reason": "low_confidence", "search_url": base_search_url}, base_search_url
 
         title_lower = title.lower()
         best_name_lower = best['name'].lower()
 
         # Palavras-chave importantes que devem estar presentes para certos tipos de jogos
         if "forza" in title_lower and "forza" not in best_name_lower:
-            # Se estamos procurando um jogo Forza, o nome do jogo encontrado deve conter "forza"
-            print(f"    ⚠️ Jogo Forza não encontrado corretamente: '{title}' → '{best['name']}' (palavra-chave ausente). Rejeitando.")
+            self._record_low_confidence_match(title, best['name'], "keyword_missing", self._guard_probability(title, best['name']), match_score)
+            if verbose:
+                print(f"    ⚠️ Jogo Forza não encontrado corretamente: '{title}' → '{best['name']}' (palavra-chave ausente). Rejeitando.")
             return {"not_found": True, "reason": "keyword_missing", "search_url": base_search_url}, base_search_url
 
         if "fifa" in title_lower and "fifa" not in best_name_lower:
-            # Se estamos procurando um jogo Fifa, o nome do jogo encontrado deve conter "fifa"
-            print(f"    ⚠️ Jogo Fifa não encontrado corretamente: '{title}' → '{best['name']}' (palavra-chave ausente). Rejeitando.")
+            self._record_low_confidence_match(title, best['name'], "keyword_missing", self._guard_probability(title, best['name']), match_score)
+            if verbose:
+                print(f"    ⚠️ Jogo Fifa não encontrado corretamente: '{title}' → '{best['name']}' (palavra-chave ausente). Rejeitando.")
             return {"not_found": True, "reason": "keyword_missing", "search_url": base_search_url}, base_search_url
 
         if "madden" in title_lower and "madden" not in best_name_lower:
-            # Se estamos procurando um jogo Madden, o nome do jogo encontrado deve conter "madden"
-            print(f"    ⚠️ Jogo Madden não encontrado corretamente: '{title}' → '{best['name']}' (palavra-chave ausente). Rejeitando.")
+            self._record_low_confidence_match(title, best['name'], "keyword_missing", self._guard_probability(title, best['name']), match_score)
+            if verbose:
+                print(f"    ⚠️ Jogo Madden não encontrado corretamente: '{title}' → '{best['name']}' (palavra-chave ausente). Rejeitando.")
             return {"not_found": True, "reason": "keyword_missing", "search_url": base_search_url}, base_search_url
 
-        print(f"    ✅ Catálogo: '{title}' → '{best['name']}' (score: {match_score:.1f}, appid: {appid})")
+        if verbose:
+            print(f"    ✅ Catálogo: '{title}' → '{best['name']}' (score: {match_score:.1f}, appid: {appid})")
 
         # 6. Obter detalhes do jogo via API (única chamada)
         json_data = self._steam_request(
             "https://store.steampowered.com/api/appdetails",
-            params={"appids": appid, "cc": "BR", "l": "portuguese"}
+            params={"appids": appid, "cc": "BR", "l": "portuguese"},
+            verbose=verbose
         )
 
         if not json_data or not isinstance(json_data, dict):
@@ -1014,11 +1370,13 @@ class OnlineFixScraper:
             }, base_search_url
 
         except Exception as e:
-            print(f"    ❌ Erro ao processar appdetails para {appid}: {e}")
+            if verbose:
+                print(f"    ❌ Erro ao processar appdetails para {appid}: {e}")
             return {"not_found": True, "reason": "exception", "search_url": base_search_url}, base_search_url
 
     def find_torrent_robust(self, title):
         self._set_webdav_cookies()
+        last_reason = {"reason": "NO_TORRENT_LINK", "status_code": 404}
         # Normaliza o título base
         name_base = re.sub(r'\s*по сети\s*', '', title, flags=re.I).strip()
         name_base = name_base.replace('’', "'").replace('‘', "'").replace('´', "'").replace('`', "'")
@@ -1055,7 +1413,6 @@ class OnlineFixScraper:
 
                     if resp.status_code == 429:
                         wait = 15 * (attempt + 1)
-                        print(f"    [WebDAV Direct Block] Aguardando {wait}s... (Tentativa {attempt+1}/3)")
                         time.sleep(wait)
                         continue
 
@@ -1066,14 +1423,15 @@ class OnlineFixScraper:
                         if 'application/x-bittorrent' in content_type or '.torrent' in content_disposition or direct_var.endswith('.torrent'):
                             # Extrai data de criação do cabeçalho se disponível
                             webdav_date = resp.headers.get('last-modified', 'Unknown')
-                            return direct_url, webdav_date, direct_url
+                            return direct_url, webdav_date, direct_url, {"reason": "OK", "status_code": 200}
                     elif resp.status_code == 401 or resp.status_code == 404:
+                        last_reason = {"reason": str(resp.status_code), "status_code": resp.status_code}
                         break  # Arquivo não existe, tentar próximo
                     elif resp.status_code == 402:  # Payment Required - problema com proxy
-                        print(f"    [WebDAV Payment Required] Erro 402 em {direct_var}, pulando...")
+                        last_reason = {"reason": str(resp.status_code), "status_code": resp.status_code}
                         break  # Não tentar mais variações desse tipo
                     elif resp.status_code == 403:  # Forbidden
-                        print(f"    [WebDAV Forbidden] Erro 403 em {direct_var}, pulando...")
+                        last_reason = {"reason": str(resp.status_code), "status_code": resp.status_code}
                         break  # Não tentar mais variações desse tipo
                     else:
                         # Outros erros, tentar novamente
@@ -1082,7 +1440,7 @@ class OnlineFixScraper:
                         continue
                 break
             except Exception as e:
-                print(f"    Erro WebDAV direto em {direct_var}: {e}")
+                last_reason = {"reason": type(e).__name__, "status_code": "ERR"}
                 if "Payment Required" in str(e) or "402" in str(e):
                     continue  # Continuar para próxima variação em vez de parar
 
@@ -1109,14 +1467,14 @@ class OnlineFixScraper:
 
                     if resp.status_code == 429:
                         wait = 60 * (attempt + 1)  # Aumentei o tempo de espera
-                        print(f"    [WebDAV Block] Aguardando {wait}s... (Tentativa {attempt+1}/5)")
                         time.sleep(wait)
                         continue
 
                     if resp.status_code in [401, 403, 404]:
-                        print(f"    [WebDAV Error] Código {resp.status_code} em {var}, pulando...")
+                        last_reason = {"reason": str(resp.status_code), "status_code": resp.status_code}
                         break  # Não tentar mais variações com este padrão
                     if resp.status_code != 200:
+                        last_reason = {"reason": str(resp.status_code), "status_code": resp.status_code}
                         break
 
                     soup = BeautifulSoup(resp.text, 'html.parser')
@@ -1137,13 +1495,13 @@ class OnlineFixScraper:
                             cells = row.find_all('td')
                             if len(cells) >= 3:
                                 webdav_date = cells[2].get_text(strip=True)
-                        return torrent_url, webdav_date, folder_url
+                        return torrent_url, webdav_date, folder_url, {"reason": "OK", "status_code": 200}
                     break
             except Exception as e:
-                print(f"    Erro WebDAV em {var}: {e}")
+                last_reason = {"reason": type(e).__name__, "status_code": "ERR"}
                 if "Payment Required" in str(e) or "402" in str(e):
                     continue  # Tentar próxima variação em vez de falhar completamente
-        return None, None, None
+        return None, None, None, last_reason
 
     # ------------------------------------------------------------------
     # Run
@@ -1340,7 +1698,8 @@ class OnlineFixScraper:
         # ====== FASE 2: Baixar torrents + Steam (paralelo) ======
         print(f"FASE 2: Baixando torrents e dados Steam ({workers} workers)...\n")
 
-        def process_game(game):
+        def process_game(game, current_idx, total_games):
+            started_at = time.time()
             title = game['title']
             href = game['href']
             p = game['page']
@@ -1351,8 +1710,10 @@ class OnlineFixScraper:
             page_dir = os.path.join(TORRENT_DIR, f"batch_{p}")
             os.makedirs(page_dir, exist_ok=True)
 
-            torrent_url, webdav_date, folder_url = self.find_torrent_robust(title)
+            torrent_url, webdav_date, folder_url, torrent_meta = self.find_torrent_robust(title)
             if not torrent_url:
+                latency_ms = int((time.time() - started_at) * 1000)
+                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, torrent_meta.get("reason", "NO_TORRENT_LINK")))
                 return None
 
             t_resp = None
@@ -1372,10 +1733,15 @@ class OnlineFixScraper:
                     time.sleep(2)
 
             if not t_resp or t_resp.status_code != 200:
+                latency_ms = int((time.time() - started_at) * 1000)
+                reason = getattr(t_resp, 'status_code', 'TORRENT_DOWNLOAD_ERR')
+                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, str(reason)))
                 return None
 
             metadata = self.get_torrent_metadata(t_resp.content)
             if not metadata:
+                latency_ms = int((time.time() - started_at) * 1000)
+                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, "BAD_TORRENT_METADATA"))
                 return None
 
             filename = os.path.basename(torrent_url)
@@ -1388,9 +1754,11 @@ class OnlineFixScraper:
             )
             torrent_link = self._normalize_torrent_link(torrent_link)
 
-            steam, _ = self.get_steam_data(title)
-            s_status = "Steam OK" if (steam and not steam.get('not_found')) else "Steam NO"
-            print(f"{title} | Torrent OK | {s_status}")
+            steam, _ = self.get_steam_data(title, verbose=False)
+            steam_ok = bool(steam and not steam.get('not_found'))
+            latency_ms = int((time.time() - started_at) * 1000)
+            reason = "OK" if steam_ok else steam.get('reason', 'NO_STEAM_MATCH')
+            print(self._format_game_log_line(current_idx, total_games, title, p, True, steam_ok, latency_ms, str(reason)))
 
             return {
                 "title": title,
@@ -1415,8 +1783,9 @@ class OnlineFixScraper:
 
         from concurrent.futures import ThreadPoolExecutor, as_completed
         results_data = []
+        total_games = len(new_games)
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = [executor.submit(process_game, g) for g in new_games]
+            futures = [executor.submit(process_game, g, idx, total_games) for idx, g in enumerate(new_games, start=1)]
             for future in as_completed(futures):
                 try:
                     result = future.result()

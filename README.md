@@ -63,6 +63,7 @@ Depois disso, carregue o arquivo local no seu script, app, API ou rotina de banc
 | `online_fix_games.json` | Dataset principal indexado |
 | `stats.json` | Estatísticas leves para badges, dashboards e automações |
 | `steam_applist_full.json` | Catálogo local da Steam usado para matching offline |
+| `low_confidence_matches.json` | Log circular dos casos rejeitados por baixa confiança para revisão e re-treino |
 | `torrents/batch_*/*.torrent` | Arquivos torrent salvos e agrupados por página |
 
 ## 🗂️ Estrutura Do Dataset
@@ -118,7 +119,8 @@ Esses dados são distribuídos nos campos abaixo:
 | `scraped_at` | Timestamp local em que a entrada foi processada |
 | `steam` | Objeto com metadados da Steam ou payload `not_found` com motivo |
 
-### Exemplo de entrada
+<details>
+<summary><strong>Exemplo de entrada</strong></summary>
 
 ```json
 {
@@ -161,7 +163,10 @@ Esses dados são distribuídos nos campos abaixo:
 }
 ```
 
-### Exemplo do objeto Steam
+</details>
+
+<details>
+<summary><strong>Exemplo do objeto Steam</strong></summary>
 
 Quando existe um match confiável com a Steam, o campo `steam` fica assim:
 
@@ -192,11 +197,14 @@ Se o scraper não conseguir validar um match seguro, ele grava um fallback leve 
 }
 ```
 
+</details>
+
 ### `stats.json`
 
 Este arquivo foi pensado para ser amigável com badges.
 
-Exemplo de estrutura:
+<details>
+<summary><strong>Exemplo de estrutura</strong></summary>
 
 ```json
 {
@@ -222,6 +230,8 @@ Exemplo de estrutura:
   "generated_at": "2026-04-23 17:32:10"
 }
 ```
+
+</details>
 
 ## 🏗️ Como A Pipeline Funciona
 
@@ -250,6 +260,199 @@ O matcher da Steam é propositalmente conservador.
 - Rejeita candidatos de baixa confiança em vez de forçar um match errado
 
 Isso significa que um jogo pode aparecer com `steam.not_found = true` quando a confiança é baixa, e isso costuma ser melhor do que anexar metadados do jogo errado.
+
+## 🤖 Match Guard Leve
+
+Além do fuzzy principal, o projeto agora usa uma camada leve de classificação para repescagem e validação final dos matches da Steam.
+
+### Componentes
+
+| Item | Arquivo | Função |
+|---|---|---|
+| Modelo leve | `tools/match_guard_model.json` | Pesos do classificador serializados em JSON |
+| Treino offline | `tools/train_match_guard.py` | Gera features, monta dataset e salva o modelo |
+| Benchmark rápido | `tools/benchmark_match_guard.py` | Mede modelo puro, híbrido e lookup real |
+| Suíte por catálogo | `tools/catalog_match_guard_suite.py` | Gera e testa casos difíceis diretamente do `steam_applist_full.json` |
+| Aliases curados | `tools/match_guard_aliases.json` | Corrige casos históricos, renomeados ou subtitulados |
+| Log contínuo | `low_confidence_matches.json` | Guarda rejeições de baixa confiança para revisão e re-treino |
+
+### O que essa camada resolve
+
+**Recupera matches bons com pequenas diferenças de nome**
+
+| Query | Match correto |
+|---|---|
+| `Godfall` | `Godfall Ultimate Edition` |
+| `Demeo PC Edition` | `Demeo` |
+| `Hasbros BATTLESHIP` | `Hasbro's BATTLESHIP` |
+| `Ghost of Tsushima DIRECTORS CUT` | `Ghost of Tsushima DIRECTOR'S CUT` |
+
+**Bloqueia falsos positivos perigosos**
+
+- Penaliza candidatos parecidos de franquia errada
+- Evita matches “criativos demais” em títulos curtos ou muito genéricos
+- Mantém aliases explícitos separados, sem enfraquecer a regra geral
+
+**Protege franquias numeradas**
+
+- `Forza Horizon 3` nunca deve casar com `Forza Horizon 4`
+- `Forza Horizon 4` nunca deve casar com `Forza Horizon 5`
+- `Resident Evil 2` nunca deve casar com `Resident Evil 3`
+- `Halo Wars 2` nunca deve casar com `Halo Wars 3`
+
+### Features usadas pelo modelinho
+
+| Grupo | Features |
+|---|---|
+| Similaridade fuzzy | `token_set_ratio`, `token_sort_ratio`, `ratio`, `partial_ratio` |
+| Igualdade textual | igualdade normalizada, igualdade compacta e contenção de string |
+| Igualdade canônica | igualdade com e sem descritores, inclusive stripping de sufixos como `Ultimate Edition` e `PC Edition` |
+| Similaridade por tokens | overlap e Jaccard de tokens gerais, relevantes e canônicos |
+| Regras de sequência | conflito explícito de franquia/número, comparação de números romanos/arábicos e anos |
+| Sinais estruturais | diferença de comprimento, contagem de tokens extras e interseção de tokens fortes |
+
+### Estratégia de treino
+
+- positivos reais extraídos do dataset atual
+- positivos sintéticos gerados a partir do catálogo da Steam
+- variações artificiais de sufixos e edições:
+  - `Ultimate Edition`
+  - `Definitive Edition`
+  - `PC Edition`
+  - `Digital Edition`
+- hard negative mining com candidatos textualmente parecidos
+- hard negatives de franquia, principalmente quando a série é igual mas o número muda
+- casos automáticos gerados a partir do próprio catálogo da Steam, cobrindo:
+  - apóstrofo
+  - `&`
+  - `:`
+  - números romanos
+  - anos
+  - edições
+  - nomes com parênteses
+  - non-ASCII
+  - títulos muito longos
+
+### Como treinar e validar
+
+```bash
+python tools/train_match_guard.py
+python tools/benchmark_match_guard.py
+python tools/catalog_match_guard_suite.py
+```
+
+O benchmark separa três níveis:
+
+- `PURE_MODEL_ACCURACY`
+- `HYBRID_MODEL_ACCURACY`
+- `LOOKUP_ACCURACY`
+
+### Fluxo de decisão
+
+```mermaid
+flowchart LR
+  A["Título raspado"] --> B["Busca top-N no catálogo Steam"]
+  B --> C["Features + Match Guard"]
+  C --> D["Regras de segurança"]
+  D --> E["Aceita match"]
+  D --> F["low_confidence / reject"]
+```
+
+As regras de segurança continuam mandando no resultado final:
+
+- conflito de franquia e número rejeita o candidato
+- match canônico forte pode validar mesmo quando o fuzzy tem ruído
+- casos históricos podem ser resolvidos por alias explícito
+- rejeições importantes vão para `low_confidence_matches.json`
+
+### Métricas locais atuais
+
+| Métrica | Resultado |
+|---|---|
+| Holdout do treino | `99%+` |
+| Benchmark do modelo puro | `24/24` |
+| Benchmark do pipeline híbrido | `24/24` |
+| Benchmark de lookup real | `24/24` |
+| Bateria funcional ampliada | `50/50` |
+| Suíte automática do catálogo Steam | `223/237` positivos e `160/160` negativos |
+
+> [!NOTE]
+> O alvo real do projeto não é “IA pura”, e sim **matching confiável em runner**. O resultado forte vem da combinação entre fuzzy, classificador leve, aliases curados e guard rails de franquia/número.
+
+### O que a suíte do catálogo mede
+
+A suíte baseada no `steam_applist_full.json` gera casos sintéticos a partir de jogos reais da Steam para forçar o matcher em cenários difíceis:
+
+- remover apóstrofos
+- trocar `&` por `and`
+- colapsar pontuação
+- remover sufixos de edição
+- testar nomes com romanos, anos, non-ASCII e títulos longos
+- validar colisões entre jogos da mesma franquia com número diferente
+
+Os números mais importantes dessa suíte são:
+
+| Grupo | Resultado |
+|---|---|
+| Positivos por catálogo | `223/237` |
+| Negativos por conflito de franquia/número | `160/160` |
+
+Os positivos que ainda falham não costumam ser “erro bruto” do modelo. Em geral são casos em que a transformação deixa o nome ambíguo demais, por exemplo:
+
+- título delistado ou legado que só existe na Steam com um subtítulo/classificador específico
+- nome base genérico demais depois de remover `(...)`
+- casos em que cortar tudo antes/depois de `:` deixa o jogo com poucas palavras úteis
+
+Isso é útil porque mostra exatamente onde vale investir em:
+
+- alias explícito
+- regras específicas de legado/collection/classic
+- revisão manual via `low_confidence_matches.json`
+
+## 📋 Novo Formato De Log
+
+O processamento da fase 2 agora prioriza uma linha compacta por jogo, reduzindo o ruído de mensagens intermediárias.
+
+Exemplo:
+
+```text
+✅ [0012/1500] | Ghost of Tsushima         | T:OK S:OK |  450ms | P:005 | 🌐 | M:   0MB | OK                 | 00:57:22
+❌ [0013/1500] | Forza Horizon 4           | T:OK S:!! | 2100ms | P:005 | 🌐 | M:   0MB | low_confidence     | 00:57:22
+```
+
+### Campos da linha
+
+| Campo | Significado |
+|---|---|
+| status final | `✅`, `⚠️` ou `❌` |
+| `[atual/total]` | progresso do processamento |
+| nome | título truncado para leitura rápida |
+| `T:OK / T:!!` | status do torrent |
+| `S:OK / S:!!` | status do match Steam |
+| `ms` | latência total por jogo |
+| `P:NNN` | página de origem no Online-Fix |
+| `🌐 / 🏠` | proxy ativo ou conexão local |
+| `M:NNNMB` | memória do processo quando disponível |
+| motivo final | resumo do resultado ou da falha |
+| horário | timestamp local da linha |
+
+### Motivos finais mais comuns
+
+| Motivo | Significado |
+|---|---|
+| `OK` | torrent e Steam resolvidos com sucesso |
+| `low_confidence` | candidato Steam rejeitado por confiança insuficiente |
+| `keyword_missing` | palavra-chave obrigatória da franquia não apareceu no candidato |
+| `NO_TORRENT_LINK` | página existe, mas o link de torrent não foi encontrado |
+| `401` / `404` / `429` | código HTTP relevante da tentativa |
+| `Timeout`, `ConnectionError`, etc. | exceção capturada durante o processo |
+
+### Objetivo do formato novo
+
+- reduzir spam de logs intermediários
+- concentrar tudo que importa em uma linha por jogo
+- facilitar debug visual em terminal, runner e GitHub Actions
+- deixar latência, rede e motivo do erro visíveis sem precisar abrir stacktrace
 
 ## ⚙️ Configuração Local
 

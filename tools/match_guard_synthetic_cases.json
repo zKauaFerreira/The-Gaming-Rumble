@@ -1,0 +1,366 @@
+[
+  {
+    "query": "4 Lift Hours",
+    "expected_found": false,
+    "category": "franchise_near_miss",
+    "likely_confusion": "Left 4 Dead",
+    "note": "Troca de palavras e fonética parecida, mas não é jogo real."
+  },
+  {
+    "query": "Left 4 Thread Ultimate Loaf",
+    "expected_found": false,
+    "category": "franchise_near_miss",
+    "likely_confusion": "Left 4 Dead",
+    "note": "Mantém esqueleto da franquia, mas o núcleo semântico mudou."
+  },
+  {
+    "query": "Portal Too",
+    "expected_found": false,
+    "category": "number_wordplay",
+    "likely_confusion": "Portal 2",
+    "note": "Parece continuação, mas usa trocadilho em vez do número real."
+  },
+  {
+    "query": "Portal Tree",
+    "expected_found": false,
+    "category": "number_wordplay",
+    "likely_confusion": "Portal 3 / Portal 2",
+    "note": "Som parecido com three, mas não é uma sequência válida."
+  },
+  {
+    "query": "Half Knife 3",
+    "expected_found": false,
+    "category": "franchise_near_miss",
+    "likely_confusion": "Half-Life 2 / Half-Life series",
+    "note": "Troca de token principal mantendo ritmo da franquia."
+  },
+  {
+    "query": "Counter-Stroke Source",
+    "expected_found": false,
+    "category": "punctuation_clone",
+    "likely_confusion": "Counter-Strike: Source",
+    "note": "Pontuação e estrutura parecidas, substantivo alterado."
+  },
+  {
+    "query": "Counter-Strike: Sauce",
+    "expected_found": false,
+    "category": "punctuation_clone",
+    "likely_confusion": "Counter-Strike: Source",
+    "note": "Uma palavra muito parecida, mas inválida."
+  },
+  {
+    "query": "Team Fortress 2.5",
+    "expected_found": false,
+    "category": "number_conflict",
+    "likely_confusion": "Team Fortress 2",
+    "note": "Pseudo-sequência intermediária."
+  },
+  {
+    "query": "Forza Horizon 66 Prototype",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "Forza Horizon 5",
+    "note": "Franquia real com número novo inexistente."
+  },
+  {
+    "query": "Forza Horizon Four Enhanced",
+    "expected_found": false,
+    "category": "number_wordplay",
+    "likely_confusion": "Forza Horizon 4",
+    "note": "Número por palavra e sufixo inventado."
+  },
+  {
+    "query": "Forza Motorsports 9",
+    "expected_found": false,
+    "category": "franchise_near_miss",
+    "likely_confusion": "Forza Motorsport",
+    "note": "Pluralização errada e número inventado."
+  },
+  {
+    "query": "Resident Evil 2.5",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "Resident Evil 2 / Resident Evil 3",
+    "note": "Meia sequência inexistente."
+  },
+  {
+    "query": "Resident Evil Village 2",
+    "expected_found": false,
+    "category": "subtitle_overreach",
+    "likely_confusion": "Resident Evil Village",
+    "note": "Subtítulo real com continuação inventada."
+  },
+  {
+    "query": "DARK SOULS IIII",
+    "expected_found": false,
+    "category": "roman_noise",
+    "likely_confusion": "DARK SOULS III",
+    "note": "Romano inválido proposital."
+  },
+  {
+    "query": "Dark Souls 2 Remake Turbo",
+    "expected_found": false,
+    "category": "descriptor_overreach",
+    "likely_confusion": "DARK SOULS II",
+    "note": "Descritor forte não existente."
+  },
+  {
+    "query": "Elden Ring Nightdream",
+    "expected_found": false,
+    "category": "subtitle_noise",
+    "likely_confusion": "ELDEN RING NIGHTREIGN",
+    "note": "Subtítulo estilisticamente parecido, mas inventado."
+  },
+  {
+    "query": "The Witchest 3",
+    "expected_found": false,
+    "category": "franchise_near_miss",
+    "likely_confusion": "The Witcher 3",
+    "note": "Palavra-base alterada por 1 caractere."
+  },
+  {
+    "query": "The Witcher IIII Wild Hunt",
+    "expected_found": false,
+    "category": "roman_noise",
+    "likely_confusion": "The Witcher 3: Wild Hunt",
+    "note": "Romano inválido com subtítulo real."
+  },
+  {
+    "query": "Baldur's Door 3",
+    "expected_found": false,
+    "category": "franchise_near_miss",
+    "likely_confusion": "Baldur's Gate 3",
+    "note": "Troca da palavra central."
+  },
+  {
+    "query": "Baldur's Gate 3.5",
+    "expected_found": false,
+    "category": "number_conflict",
+    "likely_confusion": "Baldur's Gate 3",
+    "note": "Meio capítulo inexistente."
+  },
+  {
+    "query": "Mount & Blade: Bannerlord Zero",
+    "expected_found": false,
+    "category": "subtitle_overreach",
+    "likely_confusion": "Mount & Blade II: Bannerlord",
+    "note": "Sufixo dramático inventado."
+  },
+  {
+    "query": "Mount and Blade III Bannerlord",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "Mount & Blade II: Bannerlord",
+    "note": "Número de sequência errado."
+  },
+  {
+    "query": "Call of Duty 5 Modern Peacetime",
+    "expected_found": false,
+    "category": "franchise_near_miss",
+    "likely_confusion": "Call of Duty 4: Modern Warfare",
+    "note": "Estrutura de franquia preservada, núcleo semântico trocado."
+  },
+  {
+    "query": "Call of Duty Advanced Warmfare",
+    "expected_found": false,
+    "category": "spelling_noise",
+    "likely_confusion": "Call of Duty: Advanced Warfare",
+    "note": "Erro proposital em token crítico."
+  },
+  {
+    "query": "Dead Space 2.5",
+    "expected_found": false,
+    "category": "number_conflict",
+    "likely_confusion": "Dead Space 2 / Dead Space 3",
+    "note": "Continuação intermediária inexistente."
+  },
+  {
+    "query": "Dead Space Village",
+    "expected_found": false,
+    "category": "cross_franchise_mix",
+    "likely_confusion": "Dead Space / Resident Evil Village",
+    "note": "Mistura de franquias famosas."
+  },
+  {
+    "query": "Euro Truck Simulator 4",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "Euro Truck Simulator 2",
+    "note": "Sequência inventada."
+  },
+  {
+    "query": "American Truck Simulator 3",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "American Truck Simulator",
+    "note": "Número extra inexistente."
+  },
+  {
+    "query": "Civilization VII Zero Dawn",
+    "expected_found": false,
+    "category": "cross_franchise_mix",
+    "likely_confusion": "Sid Meier's Civilization VII",
+    "note": "Mistura de franquia histórica com subtítulo aleatório."
+  },
+  {
+    "query": "Sid Meier's Civilization 5.5",
+    "expected_found": false,
+    "category": "number_conflict",
+    "likely_confusion": "Sid Meier's Civilization V / VI",
+    "note": "Pseudo-versão entre jogos reais."
+  },
+  {
+    "query": "Age of Empires III",
+    "expected_found": false,
+    "category": "roman_noise",
+    "likely_confusion": "Age of Empires II / III",
+    "note": "Romano inválido que pode confundir com II e III."
+  },
+  {
+    "query": "Age of Empires 2.5 Definitive",
+    "expected_found": false,
+    "category": "number_conflict",
+    "likely_confusion": "Age of Empires II: Definitive Edition",
+    "note": "Pseudo-versão definitiva inexistente."
+  },
+  {
+    "query": "Rainbow Seventy Siege",
+    "expected_found": false,
+    "category": "phonetic_noise",
+    "likely_confusion": "Rainbow Six Siege",
+    "note": "Soa parecido, mas não é título real."
+  },
+  {
+    "query": "Tom Clancy's Rainbow Six: Siege 2",
+    "expected_found": false,
+    "category": "subtitle_overreach",
+    "likely_confusion": "Tom Clancy's Rainbow Six Siege",
+    "note": "Continuação inventada."
+  },
+  {
+    "query": "Vampire Survivors 2",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "Vampire Survivors",
+    "note": "Número novo inexistente."
+  },
+  {
+    "query": "Vampire Survivorz",
+    "expected_found": false,
+    "category": "spelling_noise",
+    "likely_confusion": "Vampire Survivors",
+    "note": "Sufixo alterado para parecer typo."
+  },
+  {
+    "query": "Project Zomboids",
+    "expected_found": false,
+    "category": "spelling_noise",
+    "likely_confusion": "Project Zomboid",
+    "note": "Pluralização falsa."
+  },
+  {
+    "query": "Project Zomboid 2",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "Project Zomboid",
+    "note": "Sequela inventada."
+  },
+  {
+    "query": "No Man Sky",
+    "expected_found": false,
+    "category": "spelling_noise",
+    "likely_confusion": "No Man's Sky",
+    "note": "Falta apóstrofo e plural."
+  },
+  {
+    "query": "No Man's Skyline",
+    "expected_found": false,
+    "category": "franchise_near_miss",
+    "likely_confusion": "No Man's Sky",
+    "note": "Extensão de palavra-base."
+  },
+  {
+    "query": "Phasmofobia",
+    "expected_found": false,
+    "category": "spelling_noise",
+    "likely_confusion": "Phasmophobia",
+    "note": "Versão aportuguesada falsa."
+  },
+  {
+    "query": "Phasmophobia 2",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "Phasmophobia",
+    "note": "Continuação inexistente."
+  },
+  {
+    "query": "Terrariums",
+    "expected_found": false,
+    "category": "spelling_noise",
+    "likely_confusion": "Terraria",
+    "note": "Derivação parecida, mas outro substantivo."
+  },
+  {
+    "query": "Terraria 2 Classic",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "Terraria",
+    "note": "Sequela famosa inexistente na Steam atual."
+  },
+  {
+    "query": "Raft 2 Deep Ocean",
+    "expected_found": false,
+    "category": "subtitle_overreach",
+    "likely_confusion": "Raft",
+    "note": "Sequela inventada com subtítulo genérico."
+  },
+  {
+    "query": "Craftopia Online 2",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "Craftopia",
+    "note": "Usa descritor comum para forçar falso positivo."
+  },
+  {
+    "query": "Hades Three",
+    "expected_found": false,
+    "category": "number_wordplay",
+    "likely_confusion": "Hades II / Hades",
+    "note": "Nome curto com continuação por palavra."
+  },
+  {
+    "query": "Hollow Knight: Silk Sound",
+    "expected_found": false,
+    "category": "subtitle_noise",
+    "likely_confusion": "Hollow Knight: Silksong",
+    "note": "Subtítulo próximo foneticamente."
+  },
+  {
+    "query": "Slay the Spore 2",
+    "expected_found": false,
+    "category": "cross_franchise_mix",
+    "likely_confusion": "Slay the Spire 2",
+    "note": "Troca token crítico por outro famoso."
+  },
+  {
+    "query": "PowerWash Simulator 3",
+    "expected_found": false,
+    "category": "franchise_number_conflict",
+    "likely_confusion": "PowerWash Simulator / PowerWash Simulator 2",
+    "note": "Sequência além da existente."
+  },
+  {
+    "query": "Buckshot Roullette",
+    "expected_found": false,
+    "category": "spelling_noise",
+    "likely_confusion": "Buckshot Roulette",
+    "note": "Ortografia propositalmente quebrada."
+  },
+  {
+    "query": "Lethal Companies",
+    "expected_found": false,
+    "category": "spelling_noise",
+    "likely_confusion": "Lethal Company",
+    "note": "Pluralização enganosa."
+  }
+]

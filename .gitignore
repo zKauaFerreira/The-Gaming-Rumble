@@ -1,8 +1,25 @@
 .env
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .vscode/
 .idea/
 .DS_Store
-# Arquivos de log e temporários do sistema
+
+# Logs e artefatos locais
 *.log
+low_confidence_matches.json
+
+# Python tooling
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+ENV/
+tools/__pycache__/
+
+# JS / frontend local
+node_modules/

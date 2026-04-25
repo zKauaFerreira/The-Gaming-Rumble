@@ -1,0 +1,196 @@
+{
+  "bias": -5.914370683817929,
+  "weights": [
+    -0.4210846266100683,
+    -0.5029487145100922,
+    -0.40230542049971363,
+    -0.1266536904721624,
+    -0.399297724094959,
+    0.8566020739079672,
+    0.41542162087906515,
+    0.6624745734843881,
+    1.4316587136025662,
+    2.2820593696618707,
+    1.7582588272408635,
+    0.3442419166580176,
+    0.25186376666884663,
+    0.028340009685548263,
+    0.9953566964546438,
+    0.4145025981969045,
+    0.540874868682976,
+    0.6413318051318155,
+    1.8403901657340234,
+    -1.3842590388963947,
+    -1.3835102733637774,
+    0.5041888650778436,
+    0.5858032025260373,
+    0.18958279294903982,
+    -0.10421249380362912,
+    0.9479878288444282,
+    0.42170021675703856,
+    0.4029014819737498,
+    0.8042537431710773,
+    -0.6323531052696926,
+    -1.8789687045353278
+  ],
+  "threshold": 0.5,
+  "metrics": {
+    "accuracy": 0.9908731365987222,
+    "precision": 0.9834765366820886,
+    "recall": 0.9966510381781648,
+    "tp": 2976,
+    "tn": 3538,
+    "fp": 50,
+    "fn": 10
+  },
+  "manual_cases": {
+    "positive": [
+      {
+        "query": "Godfall",
+        "candidate": "Godfall Ultimate Edition",
+        "probability": 0.9961,
+        "correct": true
+      },
+      {
+        "query": "Hammerwatch II",
+        "candidate": "Hammerwatch II",
+        "probability": 0.9979,
+        "correct": true
+      },
+      {
+        "query": "RAID World War II",
+        "candidate": "RAID: World War II",
+        "probability": 0.9989,
+        "correct": true
+      },
+      {
+        "query": "Demeo PC Edition",
+        "candidate": "Demeo",
+        "probability": 0.9969,
+        "correct": true
+      },
+      {
+        "query": "Lets Cook",
+        "candidate": "Let's Cook",
+        "probability": 0.998,
+        "correct": true
+      },
+      {
+        "query": "Hasbros BATTLESHIP",
+        "candidate": "Hasbro's BATTLESHIP",
+        "probability": 0.998,
+        "correct": true
+      },
+      {
+        "query": "Tiny Tinas Wonderlands",
+        "candidate": "Tiny Tina's Wonderlands",
+        "probability": 0.9994,
+        "correct": true
+      },
+      {
+        "query": "Remnant II",
+        "candidate": "REMNANT II®",
+        "probability": 0.9979,
+        "correct": true
+      },
+      {
+        "query": "Teenage Mutant Ninja Turtles Shredders Revenge",
+        "candidate": "Teenage Mutant Ninja Turtles: Shredder's Revenge",
+        "probability": 1.0,
+        "correct": true
+      },
+      {
+        "query": "Torchlight III",
+        "candidate": "Torchlight III",
+        "probability": 0.9979,
+        "correct": true
+      },
+      {
+        "query": "Ultra Street Fighter IV",
+        "candidate": "Ultra Street Fighter® IV",
+        "probability": 0.9998,
+        "correct": true
+      },
+      {
+        "query": "SOULCALIBUR VI",
+        "candidate": "SOULCALIBUR VI",
+        "probability": 0.9979,
+        "correct": true
+      },
+      {
+        "query": "BROKE PROTOCOL Online City RPG",
+        "candidate": "BROKE PROTOCOL",
+        "probability": 0.9557,
+        "correct": true
+      },
+      {
+        "query": "Gods Trigger",
+        "candidate": "God's Trigger",
+        "probability": 0.998,
+        "correct": true
+      }
+    ],
+    "negative": [
+      {
+        "query": "Titan Quest II",
+        "candidate": "EVAN QUEST 2",
+        "probability": 0.0004,
+        "correct": true
+      },
+      {
+        "query": "DARK SOULS III",
+        "candidate": "Dark Quest 3",
+        "probability": 0.0004,
+        "correct": true
+      },
+      {
+        "query": "Project CARS 2",
+        "candidate": "Project Lazarus 2",
+        "probability": 0.0117,
+        "correct": true
+      },
+      {
+        "query": "Project CARS",
+        "candidate": "PROJECT",
+        "probability": 0.0139,
+        "correct": true
+      },
+      {
+        "query": "Total War WARHAMMER II",
+        "candidate": "Total War: SHOGUN 2",
+        "probability": 0.0027,
+        "correct": true
+      },
+      {
+        "query": "Age of Empires II",
+        "candidate": "Conquest of Empires 2",
+        "probability": 0.0008,
+        "correct": true
+      },
+      {
+        "query": "Halo Wars 2",
+        "candidate": "Wasp Wars 2",
+        "probability": 0.0131,
+        "correct": true
+      },
+      {
+        "query": "Galactic Civilizations IV",
+        "candidate": "4 Civilizations",
+        "probability": 0.0008,
+        "correct": true
+      },
+      {
+        "query": "Project Arrhythmia",
+        "candidate": "ボク姫PROJECT",
+        "probability": 0.0113,
+        "correct": true
+      },
+      {
+        "query": "Resident Evil Resistance",
+        "candidate": "Resident Evil",
+        "probability": 0.1788,
+        "correct": true
+      }
+    ]
+  }
+}
