@@ -4,3 +4,4 @@ cloudscraper
 bencode.py
 rapidfuzz
 python-dotenv
+psutil

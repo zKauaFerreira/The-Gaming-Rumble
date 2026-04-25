@@ -978,21 +978,21 @@ class OnlineFixScraper:
             extra_candidate_tokens = [token for token in candidate_core if token not in query_core]
 
             if canonical and score >= 55:
-                accepted.append((3, 0.999, score, candidate))
+                accepted.append((3, 0.999, score, "canon", candidate))
                 continue
 
             if guard_prob >= 0.72 and score >= 72:
-                accepted.append((2, guard_prob, score, candidate))
+                accepted.append((2, guard_prob, score, "model", candidate))
                 continue
 
             if score >= 90 and guard_prob >= 0.18 and core_overlap >= 0.5 and (not extra_candidate_tokens or guard_prob >= 0.45):
-                accepted.append((1, guard_prob, score, candidate))
+                accepted.append((1, guard_prob, score, "fuzzy", candidate))
 
         if not accepted:
-            return None
+            return None, None
 
         accepted.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
-        return accepted[0][3]
+        return accepted[0][4], accepted[0][3]
 
     def _record_low_confidence_match(self, title, candidate, reason, probability=None, score=None):
         path = 'low_confidence_matches.json'
@@ -1029,16 +1029,17 @@ class OnlineFixScraper:
         except Exception:
             return 0
 
-    def _format_game_log_line(self, current_idx, total, name, page_num, torrent_ok, steam_ok, latency_ms, reason):
+    def _format_game_log_line(self, current_idx, total, name, page_num, torrent_ok, steam_ok, latency_ms, reason, match_via=None):
         icon = "✅" if torrent_ok and steam_ok else "❌"
         torrent_status = "OK" if torrent_ok else "!!"
         steam_status = "OK" if steam_ok else "!!"
         safe_reason = (reason or "OK")[:18]
+        safe_via = (match_via or "--")[:5]
         return (
             f"{icon} "
             f"[{current_idx:04d}/{total:04d}] "
             f"| {name[:25]:<25} "
-            f"| T:{torrent_status} S:{steam_status} "
+            f"| T:{torrent_status} S:{steam_status} G:{safe_via:<5} "
             f"| {latency_ms:>4}ms "
             f"| P:{page_num:03d} "
             f"| {self._proxy_log_icon()} "
@@ -1283,9 +1284,10 @@ class OnlineFixScraper:
         alias_candidate = self._resolve_alias_candidate(title)
         if alias_candidate:
             best = alias_candidate
+            match_via = "alias"
         else:
         # 3. Pegar melhor match com canonicalização + guard model
-            best = self._pick_guarded_candidate(title, catalog_matches)
+            best, match_via = self._pick_guarded_candidate(title, catalog_matches)
             if not best:
                 fallback = catalog_matches[0]
                 fallback_prob = self._guard_probability(title, fallback['name'])
@@ -1360,6 +1362,7 @@ class OnlineFixScraper:
             return {
                 "steam_appid": appid,
                 "match_score": int(match_score),
+                "match_via": match_via or "catalog",
                 "header_image": d.get('header_image'),
                 "short_description": short_desc,
                 "short_description_native": short_desc_native,
@@ -1758,7 +1761,8 @@ class OnlineFixScraper:
             steam_ok = bool(steam and not steam.get('not_found'))
             latency_ms = int((time.time() - started_at) * 1000)
             reason = "OK" if steam_ok else steam.get('reason', 'NO_STEAM_MATCH')
-            print(self._format_game_log_line(current_idx, total_games, title, p, True, steam_ok, latency_ms, str(reason)))
+            match_via = steam.get('match_via') if steam_ok and isinstance(steam, dict) else None
+            print(self._format_game_log_line(current_idx, total_games, title, p, True, steam_ok, latency_ms, str(reason), match_via))
 
             return {
                 "title": title,
