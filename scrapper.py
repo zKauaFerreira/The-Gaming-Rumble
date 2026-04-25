@@ -1220,11 +1220,11 @@ class OnlineFixScraper:
             text = str(value).strip()
             for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
                 try:
-                    return datetime.strptime(text, fmt).strftime("%d/%m/%Y - %H:%M")
+                    return datetime.strptime(text, fmt).strftime("%d/%m/%Y")
                 except ValueError:
                     pass
             try:
-                return datetime.fromisoformat(text.replace("Z", "+00:00")).strftime("%d/%m/%Y - %H:%M")
+                return datetime.fromisoformat(text.replace("Z", "+00:00")).strftime("%d/%m/%Y")
             except ValueError:
                 return text
 
