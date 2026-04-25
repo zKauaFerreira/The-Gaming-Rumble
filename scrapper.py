@@ -297,8 +297,11 @@ class OnlineFixScraper:
             candidate_keywords = set(self._meaningful_tokens(candidate_name))
             query_text_tokens = set(self._textual_tokens(original_name))
             candidate_text_tokens = set(self._textual_tokens(candidate_name))
+            query_distinctive_tokens = set(self._distinctive_tokens(original_name))
+            candidate_distinctive_tokens = set(self._distinctive_tokens(candidate_name))
             keyword_overlap = len(query_keywords.intersection(candidate_keywords))
             text_overlap = len(query_text_tokens.intersection(candidate_text_tokens))
+            distinctive_overlap = len(query_distinctive_tokens.intersection(candidate_distinctive_tokens))
 
             if query_text_tokens and not candidate_text_tokens and normalized_query != self._normalize(candidate_name):
                 return -100
@@ -306,6 +309,10 @@ class OnlineFixScraper:
                 return -100
             if len(query_keywords) >= 2 and keyword_overlap == 0:
                 return -100
+            if query_distinctive_tokens and distinctive_overlap == 0:
+                return -100
+            if len(query_distinctive_tokens) >= 2 and distinctive_overlap < len(query_distinctive_tokens):
+                score -= 18
 
             if query_keywords and candidate_keywords:
                 keyword_similarity = keyword_overlap / max(len(query_keywords), len(candidate_keywords))
@@ -677,6 +684,21 @@ class OnlineFixScraper:
     def _textual_tokens(self, s):
         return [token for token in self._meaningful_tokens(s) if re.search(r'[a-z]', token)]
 
+    def _distinctive_tokens(self, s):
+        """Tokens mais distintivos para validar se o match realmente pertence ao mesmo título/franquia."""
+        generic_tokens = {
+            "project", "quest", "total", "war", "wars", "world", "story", "stories",
+            "edition", "definitive", "deluxe", "complete", "collection", "digital",
+            "ultimate", "enhanced", "remaster", "remastered", "anniversary", "redux",
+            "rise", "rising", "returns", "return", "reborn", "heroes", "hero",
+            "battle", "brawl", "party", "simulator", "adventure", "survival",
+            "online", "dark", "legend", "legends", "chronicles", "saga"
+        }
+        return [
+            token for token in self._textual_tokens(s)
+            if len(token) >= 3 and token not in generic_tokens
+        ]
+
     def _get_importance_weight(self, word):
         """Retorna peso de importância para uma palavra (palavras comuns têm peso menor)"""
         common_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
@@ -860,7 +882,7 @@ class OnlineFixScraper:
 
         total_games = len(downloads)
         match_rate = round((steam_with_metadata / total_games) * 100, 2) if total_games else 0.0
-        success_rate = round(100 - match_rate, 2) if total_games else 0.0
+        success_rate = match_rate
 
         stats = {
             "repo": GITHUB_REPO,
@@ -920,6 +942,10 @@ class OnlineFixScraper:
 
         # 5. Verificação adicional para jogos de séries conhecidas
         # Certificar que palavras-chave principais estão presentes
+        if match_score < 88:
+            print(f"    âš ï¸ Score baixo ({match_score:.1f}) para '{title}' â†’ '{best['name']}'. Rejeitando.")
+            return {"not_found": True, "reason": "low_confidence", "search_url": base_search_url}, base_search_url
+
         title_lower = title.lower()
         best_name_lower = best['name'].lower()
 
