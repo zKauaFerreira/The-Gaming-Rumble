@@ -185,14 +185,18 @@ class OnlineFixScraper:
 
         try:
             # Usar utf-8-sig para lidar com BOM automaticamente
-            with open(catalog_path, 'r', encoding='utf-8-sig') as f:
-                data = json.load(f)
+            data = self._load_json_file(catalog_path)
             apps = data.get('apps', [])
             print(f"✅ Catálogo Steam carregado: {len(apps)} jogos")
             return apps
         except Exception as e:
             print(f"❌ Erro ao carregar catálogo Steam: {e}")
             return []
+
+    def _load_json_file(self, path):
+        """Carrega JSON aceitando arquivos com ou sem BOM UTF-8."""
+        with open(path, 'r', encoding='utf-8-sig') as f:
+            return json.load(f)
 
     def _search_in_catalog(self, normalized_query, original_name):
         """Robust search in the local Steam catalog.
@@ -1215,7 +1219,7 @@ class OnlineFixScraper:
         existing_links = set()
         if os.path.exists('online_fix_games.json'):
             try:
-                with open('online_fix_games.json', 'r', encoding='utf-8') as f:
+                with open('online_fix_games.json', 'r', encoding='utf-8-sig') as f:
                     old_json = json.load(f)
                     all_data = old_json.get('downloads', [])
                     for item in all_data:
