@@ -1214,6 +1214,20 @@ class OnlineFixScraper:
             if isinstance(item.get('page'), int)
         })
 
+        def format_stat_datetime(value):
+            if not is_valid_stat_value(value):
+                return None
+            text = str(value).strip()
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+                try:
+                    return datetime.strptime(text, fmt).strftime("%d/%m/%Y - %H:%M")
+                except ValueError:
+                    pass
+            try:
+                return datetime.fromisoformat(text.replace("Z", "+00:00")).strftime("%d/%m/%Y - %H:%M")
+            except ValueError:
+                return text
+
         last_scrape_at = None
         last_game_update = None
         for item in downloads:
@@ -1235,6 +1249,8 @@ class OnlineFixScraper:
         match_rate = round((steam_with_metadata / total_games) * 100, 2) if total_games else 0.0
         success_rate = match_rate
 
+        generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         stats = {
             "repo": GITHUB_REPO,
             "branch": GITHUB_BRANCH,
@@ -1254,8 +1270,10 @@ class OnlineFixScraper:
             "torrent_files_total": self._count_local_torrent_files(),
             "json_entries_with_torrent": sum(1 for item in downloads if item.get('torrent_file')),
             "last_scrape_at": last_scrape_at,
+            "last_scrape_at_display": format_stat_datetime(last_scrape_at),
             "last_game_update": last_game_update,
-            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "generated_at": generated_at,
+            "generated_at_display": format_stat_datetime(generated_at),
         }
 
         with open('stats.json', 'w', encoding='utf-8') as f:

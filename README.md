@@ -4,9 +4,9 @@
 
 ## ✨ Snapshot Ao Vivo
 
-| Total de Jogos | Steam Encontrados | Steam Ausentes | Success Rate | Páginas Online-Fix | Arquivos Torrent |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.total_games&label=%20&color=2ea44f&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_with_metadata&label=%20&color=1f6feb&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_without_metadata&label=%20&color=d73a49&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.success_rate&suffix=%25&label=%20&color=8250df&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.online_fix_pages_total&label=%20&color=fb8500&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.torrent_files_total&label=%20&color=0a9396&style=flat-square) |
+| Total de Jogos | Steam Encontrados | Steam Ausentes | Success Rate | Páginas Online-Fix | Arquivos Torrent | Último Update |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.total_games&label=%20&color=2ea44f&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_with_metadata&label=%20&color=1f6feb&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_without_metadata&label=%20&color=d73a49&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.success_rate&suffix=%25&label=%20&color=8250df&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.online_fix_pages_total&label=%20&color=fb8500&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.torrent_files_total&label=%20&color=0a9396&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.last_scrape_at_display&label=%20&color=6f42c1&style=flat-square) |
 
 ## 📌 O Que Este Repositório Faz
 
@@ -570,6 +570,7 @@ Consultas úteis:
 | Success Rate | `%24.success_rate` |
 | Online-Fix Pages | `%24.online_fix_pages_total` |
 | Torrent Files | `%24.torrent_files_total` |
+| Last Update | `%24.last_scrape_at_display` |
 | JSON Torrents | `%24.json_entries_with_torrent` |
 | Last Page | `%24.last_page_in_json` |
 
