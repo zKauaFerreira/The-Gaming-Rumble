@@ -12,11 +12,11 @@
   "pages_scraped_target": 89,
   "pages_present_in_json": 89,
   "last_page_in_json": 89,
-  "new_games_found_this_run": 1837,
-  "processed_games_this_run": 1687,
+  "new_games_found_this_run": 150,
+  "processed_games_this_run": 0,
   "torrent_files_total": 1698,
   "json_entries_with_torrent": 1687,
   "last_scrape_at": "2026-04-25 02:45:06",
   "last_game_update": "2026-04-24T16:35:57+03:00",
-  "generated_at": "2026-04-25 02:45:06"
+  "generated_at": "2026-04-25 18:44:40"
 }
