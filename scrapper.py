@@ -67,6 +67,12 @@ WEBDAV_HEADERS = {
     "upgrade-insecure-requests": "1",
 }
 
+WEBDAV_OPTIONAL_TRAILING_WORDS = {
+    "online",
+    "arcade",
+    "overdrive",
+}
+
 
 class OnlineFixScraper:
     def __init__(self, base_url=None):
@@ -1405,11 +1411,36 @@ class OnlineFixScraper:
 
         clean_name = self.clean_name_for_url(title)
 
+        def build_name_variants(raw_title):
+            variants = []
+
+            def add_variant(candidate):
+                candidate = re.sub(r'\s+', ' ', str(candidate or '').strip())
+                if not candidate:
+                    return
+                if candidate not in variants:
+                    variants.append(candidate)
+
+            add_variant(raw_title)
+
+            if "'" not in raw_title and "s " in raw_title:
+                add_variant(raw_title.replace("s ", "'s "))
+
+            words = raw_title.split()
+            trimmed_words = words[:]
+            while trimmed_words and trimmed_words[-1].lower() in WEBDAV_OPTIONAL_TRAILING_WORDS:
+                trimmed_words = trimmed_words[:-1]
+                add_variant(" ".join(trimmed_words))
+
+            return variants
+
+        name_variants = build_name_variants(name_base)
+
         # Primeiro tenta diretamente com o nome do jogo + extensão .torrent
         # Isso pode evitar a necessidade de acessar o diretório WebDAV
-        direct_variations = [
-            quote(name_base, safe='') + '.torrent',
-        ]
+        direct_variations = []
+        for variant_name in name_variants:
+            direct_variations.append(quote(variant_name, safe='') + '.torrent')
 
         # Adiciona variações com possíveis formatos de nome de arquivo
         possible_formats = [
@@ -1421,8 +1452,11 @@ class OnlineFixScraper:
         ]
 
         for fmt in possible_formats:
-            formatted_name = fmt.format(name=name_base)
-            direct_variations.append(quote(formatted_name, safe=''))
+            for variant_name in name_variants:
+                formatted_name = fmt.format(name=variant_name)
+                quoted_name = quote(formatted_name, safe='')
+                if quoted_name not in direct_variations:
+                    direct_variations.append(quoted_name)
 
         # Tenta acesso direto primeiro
         for direct_var in direct_variations:
@@ -1467,16 +1501,7 @@ class OnlineFixScraper:
                     continue  # Continuar para próxima variação em vez de parar
 
         # Se acesso direto falhar, tenta o método original de acesso ao diretório
-        variations = [
-            quote(name_base, safe=''),  # MY%20HERO%20ACADEMIA%20All%27s%20Justice
-        ]
-
-        # Só adiciona variações se o título base for muito diferente do esperado
-        # para evitar "chutes" desnecessários
-        if "'" not in name_base and "s " in name_base:
-            # Tenta inserir o apóstrofo antes do 's' final em palavras
-            variation_with_apostrophe = name_base.replace("s ", "'s ")
-            variations.append(quote(variation_with_apostrophe, safe=''))
+        variations = [quote(variant_name, safe='') for variant_name in name_variants]
 
         for var in variations:
             # Delay entre tentativas de pasta no WebDAV
