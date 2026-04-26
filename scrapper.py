@@ -1196,7 +1196,7 @@ class OnlineFixScraper:
             total += sum(1 for name in files if name.lower().endswith('.torrent'))
         return total
 
-    def _write_stats(self, downloads, requested_pages, discovered_max_page, scraped_new_games, processed_results):
+    def _write_stats(self, downloads, requested_pages, discovered_max_page, scraped_new_games, processed_results, latest_run_new_game_names=None):
         def is_valid_stat_value(value):
             if value is None:
                 return False
@@ -1266,6 +1266,7 @@ class OnlineFixScraper:
             "pages_present_in_json": len(pages_in_json),
             "last_page_in_json": pages_in_json[-1] if pages_in_json else 0,
             "new_games_found_this_run": scraped_new_games,
+            "latest_run_new_game_names": latest_run_new_game_names or [],
             "processed_games_this_run": processed_results,
             "torrent_files_total": self._count_local_torrent_files(),
             "json_entries_with_torrent": sum(1 for item in downloads if item.get('torrent_file')),
@@ -1899,6 +1900,7 @@ class OnlineFixScraper:
             requested_pages=limit_page,
             discovered_max_page=max_page,
             scraped_new_games=total_found,
+            latest_run_new_game_names=[game.get('title') for game in new_games if game.get('title')],
             processed_results=len(results_data),
         )
         print(
