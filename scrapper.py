@@ -1844,6 +1844,7 @@ class OnlineFixScraper:
 
         # Merge: substitui ou adiciona jogos, detectando atualizações pelo last_update
         data_lock = __import__('threading').Lock()
+        added_new_game_names = []
         with data_lock:
             # Criar mapa de título -> item existente
             existing_map = {item['title']: item for item in all_data}
@@ -1855,6 +1856,7 @@ class OnlineFixScraper:
                     # Jogo novo, adicionar
                     all_data.append(current_scraped_game)
                     existing_map[title] = current_scraped_game
+                    added_new_game_names.append(title)
                 else:
                     # Jogo existe, verificar se há atualização
                     existing_game_in_all_data = existing_map[title]
@@ -1925,7 +1927,7 @@ class OnlineFixScraper:
             requested_pages=limit_page,
             discovered_max_page=max_page,
             scraped_new_games=total_found,
-            latest_run_new_game_names=[game.get('title') for game in new_games if game.get('title')],
+            latest_run_new_game_names=added_new_game_names,
             processed_results=len(results_data),
         )
         print(
