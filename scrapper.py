@@ -271,6 +271,15 @@ class OnlineFixScraper:
                     result.append(exact_match)
 
             if result:
+                result.sort(
+                    key=lambda app: (
+                        1 if app['name'] == original_name else 0,
+                        1 if app['name'].casefold() == original_name.casefold() else 0,
+                        fuzz.ratio(original_name, app['name']),
+                        fuzz.ratio(normalized_query, self._normalize(app['name']))
+                    ),
+                    reverse=True
+                )
                 return result
 
         # Process exact matches with the same logic as other matches
@@ -1291,7 +1300,8 @@ class OnlineFixScraper:
     def get_steam_data(self, title, verbose=False):
         """Obtém metadados da Steam usando catálogo local (offline, zero rate limit)."""
         # Normalização
-        clean = self._normalize(re.sub(r'\s*по сети\s*', '', title, flags=re.I).strip())
+        raw_clean = re.sub(r'\s*по сети\s*', '', title, flags=re.I).strip()
+        clean = self._normalize(raw_clean)
 
         # URL para referência (compatibilidade)
         base_search_url = f"https://store.steampowered.com/api/storesearch/?term={quote(clean)}&l=portuguese&cc=BR"
@@ -1301,7 +1311,7 @@ class OnlineFixScraper:
             return {"not_found": True, "reason": "no_catalog", "search_url": base_search_url}, base_search_url
 
         # 2. Buscar no catálogo local usando a função aprimorada
-        catalog_matches = self._steam_search(clean)
+        catalog_matches = self._steam_search(raw_clean)
 
         if not catalog_matches:
             return {"not_found": True, "reason": "not_on_steam", "search_url": base_search_url}, base_search_url
