@@ -5,6 +5,13 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use super::logger::{LogLevel, log, log_tag};
 
+#[derive(serde::Serialize, Clone, Copy)]
+struct DownloadFinishedPayload {
+    success: bool,
+    fix_only: bool,
+    exit_code: Option<i32>,
+}
+
 fn get_trackers() -> String {
     let mut trackers = Vec::new();
     trackers.push("udp://tracker.opentrackr.org:1337/announce");
@@ -306,6 +313,34 @@ pub async fn start_torrent(app: AppHandle, magnet: String, install_path: String)
         }
     });
 
+    let app3 = app.clone();
+    tokio::spawn(async move {
+        match child.wait() {
+            Ok(status) => {
+                let success = status.success();
+                let exit_code = status.code();
+                if success {
+                    log_tag(LogLevel::SUCCESS, "DOWNLOAD", "aria2c finalizou o download.");
+                } else {
+                    log_tag(LogLevel::ERROR, "DOWNLOAD", format!("aria2c encerrou com codigo {:?}", exit_code));
+                }
+                let _ = app3.emit("download-finished", DownloadFinishedPayload {
+                    success,
+                    fix_only: false,
+                    exit_code,
+                });
+            }
+            Err(err) => {
+                log_tag(LogLevel::ERROR, "DOWNLOAD", format!("Falha ao aguardar aria2c: {}", err));
+                let _ = app3.emit("download-finished", DownloadFinishedPayload {
+                    success: false,
+                    fix_only: false,
+                    exit_code: None,
+                });
+            }
+        }
+    });
+
     tokio::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         let _ = std::fs::remove_file(&input_file);
@@ -411,6 +446,34 @@ pub async fn start_fix_download(app: AppHandle, magnet: String, install_path: St
             if let Ok(l) = line {
                 let _ = app2.emit("download-log", format!("ERROR: {}", l));
                 log_tag(LogLevel::ERROR, "DOWNLOAD", l);
+            }
+        }
+    });
+
+    let app3 = app.clone();
+    tokio::spawn(async move {
+        match child.wait() {
+            Ok(status) => {
+                let success = status.success();
+                let exit_code = status.code();
+                if success {
+                    log_tag(LogLevel::SUCCESS, "DOWNLOAD", "aria2c finalizou o download do fix.");
+                } else {
+                    log_tag(LogLevel::ERROR, "DOWNLOAD", format!("aria2c (fix) encerrou com codigo {:?}", exit_code));
+                }
+                let _ = app3.emit("download-finished", DownloadFinishedPayload {
+                    success,
+                    fix_only: true,
+                    exit_code,
+                });
+            }
+            Err(err) => {
+                log_tag(LogLevel::ERROR, "DOWNLOAD", format!("Falha ao aguardar aria2c do fix: {}", err));
+                let _ = app3.emit("download-finished", DownloadFinishedPayload {
+                    success: false,
+                    fix_only: true,
+                    exit_code: None,
+                });
             }
         }
     });

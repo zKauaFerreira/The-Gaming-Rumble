@@ -11,12 +11,14 @@ interface HeaderProps {
   currentView: string;
   onViewChange: (view: any) => void;
   onLogoClick: () => void;
+  interactionLocked?: boolean;
 }
 
-export function Header({ currentView, onViewChange, onLogoClick }: HeaderProps) {
+export function Header({ currentView, onViewChange, onLogoClick, interactionLocked = false }: HeaderProps) {
   const win = getCurrentWindow();
 
   const handleDrag = (e: React.MouseEvent) => {
+    if (interactionLocked) return;
     if (e.target instanceof HTMLElement && e.target.closest('button')) return;
     win.startDragging();
   };
@@ -34,9 +36,10 @@ export function Header({ currentView, onViewChange, onLogoClick }: HeaderProps) 
         ].map(t => (
           <button
             key={t.id}
-            onClick={() => onViewChange(t.id)}
+            onClick={() => !interactionLocked && onViewChange(t.id)}
+            disabled={interactionLocked}
             className={cn(
-              "px-5 h-11 text-[11px] tracking-[0.3em] transition-all rounded-2xl flex items-center gap-3 cursor-pointer",
+              "px-5 h-11 text-[11px] tracking-[0.3em] transition-all rounded-2xl flex items-center gap-3 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40",
               currentView === t.id ? "text-[#a4e6ff] bg-white/5 shadow-inner border border-white/5" : "text-slate-500 hover:text-[#e5e1e4] hover:bg-white/5"
             )}
           >
@@ -49,9 +52,10 @@ export function Header({ currentView, onViewChange, onLogoClick }: HeaderProps) 
       {/* Settings + Minimize + Close - direita */}
       <div className="flex items-center gap-1">
         <button
-          onClick={() => onViewChange(currentView === 'settings' ? 'library' : 'settings')}
+          onClick={() => !interactionLocked && onViewChange(currentView === 'settings' ? 'library' : 'settings')}
+          disabled={interactionLocked}
           className={cn(
-            "p-3 rounded-2xl transition-all border border-transparent cursor-pointer",
+            "p-3 rounded-2xl transition-all border border-transparent cursor-pointer disabled:cursor-not-allowed disabled:opacity-40",
             currentView === 'settings' ? "text-[#a4e6ff] bg-white/10 border-white/10 shadow-glow-sm" : "text-slate-500 hover:text-[#a4e6ff]"
           )}
         >
@@ -60,16 +64,18 @@ export function Header({ currentView, onViewChange, onLogoClick }: HeaderProps) 
 
         {/* Minimize button */}
         <button
-          onClick={() => win.minimize()}
-          className="p-3 rounded-2xl text-slate-500 hover:text-[#a4e6ff] hover:bg-white/10 transition-all cursor-pointer flex items-center justify-center"
+          onClick={() => !interactionLocked && win.minimize()}
+          disabled={interactionLocked}
+          className="p-3 rounded-2xl text-slate-500 hover:text-[#a4e6ff] hover:bg-white/10 transition-all cursor-pointer flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Icon name="remove" size={20} />
         </button>
 
         {/* Close button */}
         <button
-          onClick={() => win.close()}
-          className="p-3 rounded-2xl text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-all cursor-pointer"
+          onClick={() => !interactionLocked && win.close()}
+          disabled={interactionLocked}
+          className="p-3 rounded-2xl text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Icon name="close" size={20} />
         </button>

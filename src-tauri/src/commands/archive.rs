@@ -628,18 +628,23 @@ fn remove_empty_dirs(dir: &Path) {
 }
 
 #[tauri::command]
-pub fn delete_folder(path: String) -> Result<(), String> {
+pub async fn delete_folder(path: String) -> Result<(), String> {
     log_tag(LogLevel::INFO, "DELETE", format!("Deletando pasta: {}", path));
-    let p = Path::new(&path);
-    if p.exists() {
-        make_writable_recursive(p);
-        std::fs::remove_dir_all(p).map_err(|e| {
-            log_tag(LogLevel::ERROR, "DELETE", format!("Erro ao deletar: {}", e));
-            e.to_string()
-        })?;
-        log_tag(LogLevel::SUCCESS, "DELETE", format!("Pasta deletada: {}", path));
-    }
-    Ok(())
+    let delete_path = path.clone();
+    tokio::task::spawn_blocking(move || {
+        let p = PathBuf::from(&delete_path);
+        if p.exists() {
+            make_writable_recursive(&p);
+            std::fs::remove_dir_all(&p).map_err(|e| {
+                log_tag(LogLevel::ERROR, "DELETE", format!("Erro ao deletar: {}", e));
+                e.to_string()
+            })?;
+            log_tag(LogLevel::SUCCESS, "DELETE", format!("Pasta deletada: {}", delete_path));
+        }
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[cfg(target_os = "windows")]
@@ -647,17 +652,15 @@ fn make_writable_recursive(path: &Path) {
     if path.is_dir() {
         if let Ok(entries) = std::fs::read_dir(path) {
             for entry in entries.flatten() {
-                if entry.path().is_dir() {
-                    make_writable_recursive(&entry.path());
-                }
+                make_writable_recursive(&entry.path());
             }
         }
-        if let Ok(meta) = std::fs::metadata(path) {
-            let mut perms = meta.permissions();
-            if perms.readonly() {
-                perms.set_readonly(false);
-                let _ = std::fs::set_permissions(path, perms);
-            }
+    }
+    if let Ok(meta) = std::fs::metadata(path) {
+        let mut perms = meta.permissions();
+        if perms.readonly() {
+            perms.set_readonly(false);
+            let _ = std::fs::set_permissions(path, perms);
         }
     }
 }

@@ -8,8 +8,22 @@ export function encodeGamePayload(payload: GamePayload): string {
 
 export function decodeGamePayload(raw: string): GamePayload | null {
   try {
-    let b64 = raw.replace(/^gaming-rumble:\/\//, "");
-    if (b64.endsWith("/")) b64 = b64.slice(0, -1);
+    let normalized = raw.trim().replace(/^"+|"+$/g, "");
+    const protocolIdx = normalized.toLowerCase().indexOf("gaming-rumble://");
+    if (protocolIdx >= 0) {
+      normalized = normalized.slice(protocolIdx);
+    }
+
+    let b64 = normalized.replace(/^gaming-rumble:\/\//i, "");
+    b64 = decodeURIComponent(b64)
+      .trim()
+      .replace(/^"+|"+$/g, "")
+      .replace(/\s/g, "")
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+
+    while (b64.endsWith("/")) b64 = b64.slice(0, -1);
+    while (b64.length % 4 !== 0) b64 += "=";
     
     const json = decodeURIComponent(escape(atob(b64)));
     const parsed = JSON.parse(json) as GamePayload;

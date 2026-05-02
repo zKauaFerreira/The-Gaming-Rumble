@@ -13,7 +13,8 @@ use commands::{
     disk::{list_drives, get_disk_space},
     torrent::{start_torrent, stop_torrent, start_fix_download},
     archive::{extract_game, delete_folder, finalize_installation},
-    library::{get_library, add_to_library, remove_from_library}
+    library::{get_library, add_to_library, remove_from_library},
+    update::{check_for_app_update, install_app_update, PendingUpdate}
 };
 
 #[cfg(windows)]
@@ -48,6 +49,12 @@ struct DeepLinkState {
     pending_uri: Mutex<Option<String>>,
 }
 
+fn parse_deep_link_arg(arg: &str) -> Option<String> {
+    let trimmed = arg.trim().trim_matches('"');
+    let idx = trimmed.to_ascii_lowercase().find("gaming-rumble://")?;
+    Some(trimmed[idx..].to_string())
+}
+
 fn queue_deep_link(app: &tauri::AppHandle, uri: String) {
     if let Some(state) = app.try_state::<DeepLinkState>() {
         if let Ok(mut pending_uri) = state.pending_uri.lock() {
@@ -69,11 +76,12 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(DeepLinkState::default())
+        .manage(PendingUpdate(Mutex::new(None)))
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             eprintln!("[SINGLE-INSTANCE] args: {:?}", argv);
-            if let Some(uri) = argv.iter().find(|arg| arg.starts_with("gaming-rumble://")) {
+            if let Some(uri) = argv.iter().find_map(|arg| parse_deep_link_arg(arg)) {
                 eprintln!("[DEEP-LINK] URI received: {}", uri);
-                queue_deep_link(app, uri.to_string());
+                queue_deep_link(app, uri);
             }
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -104,11 +112,16 @@ pub fn run() {
             create_shortcut,
             remove_shortcut,
             shortcut_exists,
-            consume_pending_deeplink
+            consume_pending_deeplink,
+            check_for_app_update,
+            install_app_update
         ])
         .setup(|app| {
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+
             // Keep the deep link queued so the frontend can consume it after mounting.
-            if let Some(uri) = std::env::args().find(|a| a.starts_with("gaming-rumble://")) {
+            if let Some(uri) = std::env::args().find_map(|arg| parse_deep_link_arg(&arg)) {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.show();
                     let _ = window.set_focus();

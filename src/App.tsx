@@ -7,6 +7,7 @@ import { listen } from "@tauri-apps/api/event";
 // Components
 import { Header } from "./components/Layout/Header";
 import { Footer } from "./components/Layout/Footer";
+import { AppUpdateModal, type AppUpdateModalState } from "./components/AppUpdateModal";
 import { LibraryView } from "./components/Views/LibraryView";
 import { SetupView } from "./components/Views/SetupView";
 import { ActivityView } from "./components/Views/ActivityView";
@@ -21,6 +22,29 @@ const STORAGE_KEY_DRIVE = "gr_default_drive";
 
 const DOWNLOAD_STATE_KEY = "gr_download_state";
 
+type DownloadFinishedEvent = {
+  success: boolean;
+  fix_only: boolean;
+  exit_code?: number | null;
+};
+
+type UpdateCheckResponse = {
+  configured: boolean;
+  available: boolean;
+  currentVersion: string;
+  version?: string | null;
+  notes?: string | null;
+  pubDate?: string | null;
+  error?: string | null;
+};
+
+type AppUpdateEvent =
+  | { event: "Started"; data: { contentLength?: number | null; version: string } }
+  | { event: "Progress"; data: { downloaded: number; chunkLength: number; contentLength?: number | null } }
+  | { event: "FinishedDownload" }
+  | { event: "Installing" }
+  | { event: "Failed"; data: { message: string } };
+
 export default function App() {
   const [view, setView] = useState<View>("library");
   const [downloadState, setDownloadState] = useState<DownloadState | null>(
@@ -34,6 +58,20 @@ export default function App() {
   const [activePayload, setActivePayload] = useState<GamePayload | null>(null);
   const [defaultDrive, setDefaultDrive] = useState(() => localStorage.getItem(STORAGE_KEY_DRIVE) ?? "C:\\");
   const extractionRunKeyRef = useRef<string | null>(null);
+  const [appUpdate, setAppUpdate] = useState<AppUpdateModalState>({
+    visible: false,
+    configured: false,
+    stage: "idle",
+    currentVersion: "",
+    nextVersion: "",
+    notes: "",
+    progressPercent: 0,
+    downloadedBytes: 0,
+    totalBytes: null,
+    errorMessage: ""
+  });
+
+  const isUpdateBlocking = appUpdate.visible && appUpdate.configured;
 
   const addLog = useCallback((tag: LogEntry["tag"], msg: string) => {
     setDownloadState(prev => prev ? ({
@@ -46,6 +84,10 @@ export default function App() {
   // Alt+F4 / close window
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (isUpdateBlocking && (e.altKey && e.key === "F4")) {
+        e.preventDefault();
+        return;
+      }
       if (e.altKey && e.key === 'F4') {
         e.preventDefault();
         import("@tauri-apps/api/window").then(m => m.getCurrentWindow().close());
@@ -53,7 +95,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [isUpdateBlocking]);
 
   // Effect: Persist download state to localStorage (survives HMR/reload)
   useEffect(() => {
@@ -138,6 +180,28 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    invoke<UpdateCheckResponse>("check_for_app_update")
+      .then((result) => {
+        if (!result?.configured || !result.available || !result.version) return;
+        setAppUpdate({
+          visible: true,
+          configured: true,
+          stage: "available",
+          currentVersion: result.currentVersion,
+          nextVersion: result.version,
+          notes: result.notes ?? "",
+          progressPercent: 0,
+          downloadedBytes: 0,
+          totalBytes: null,
+          errorMessage: result.error ?? ""
+        });
+      })
+      .catch((error) => {
+        console.warn("[UPDATER] Failed to check for updates:", error);
+      });
+  }, []);
+
   // Persist download state to localStorage (survives HMR/reload)
   useEffect(() => {
     if (downloadState) {
@@ -211,12 +275,7 @@ export default function App() {
 
           if (totalMiB >= 10 && totalMiB > 0) {
             const calculatedPct = Math.min((downloadedMiB / totalMiB) * 100, 100);
-            newState.progressPercent = calculatedPct;
-            // Auto-complete when download is essentially done (within 1%)
-            if (calculatedPct >= 99.9 && newState.phase === "downloading") {
-              newState.phase = "extracting";
-              newState.progressPercent = 100;
-            }
+            newState.progressPercent = Math.min(calculatedPct, 99.9);
           }
         }
         if (isMetadataOnlyStage && newState.phase === "downloading" && newState.progressPercent <= 0) {
@@ -239,7 +298,7 @@ export default function App() {
           console.log(`[aria2c] ${log.replace(/\[\d+m/g, '')}`);
         }
 
-        if (log.includes("Seeding is over") && newState.phase === "downloading") {
+        if (false && log.includes("Seeding is over") && newState.phase === "downloading") {
           newState.progressPercent = 100;
           // If fixOnly mode, skip extraction and open folder
           if (newState.fixOnly) {
@@ -278,6 +337,96 @@ export default function App() {
         }
 
         return newState;
+      });
+    });
+
+    const unFinished = listen<DownloadFinishedEvent>("download-finished", (e) => {
+      const data = e.payload;
+      setDownloadState(prev => {
+        if (!prev || prev.phase !== "downloading") return prev;
+
+        if (!data.success) {
+          return {
+            ...prev,
+            phase: "error" as const,
+            errorMessage: prev.errorMessage || `Falha ao finalizar download (aria2 exit ${data.exit_code ?? "desconhecido"}).`
+          };
+        }
+
+        if (data.fix_only || prev.fixOnly) {
+          invoke("open_path", { path: prev.installPath, selectFile: prev.installPath }).catch(() => {});
+          return {
+            ...prev,
+            phase: "done" as const,
+            progressPercent: 100,
+            extractionPartPercent: 100,
+            speedMBs: 0,
+            eta: "--"
+          };
+        }
+
+        return {
+          ...prev,
+          phase: "extracting" as const,
+          progressPercent: 100,
+          speedMBs: 0,
+          eta: "--"
+        };
+      });
+    });
+
+    const unAppUpdate = listen<AppUpdateEvent>("app-update", (e) => {
+      const payload = e.payload;
+      setAppUpdate(prev => {
+        if (!prev.configured && !prev.visible) return prev;
+
+        switch (payload.event) {
+          case "Started":
+            return {
+              ...prev,
+              stage: "downloading",
+              progressPercent: 0,
+              downloadedBytes: 0,
+              totalBytes: payload.data.contentLength ?? null,
+              nextVersion: payload.data.version || prev.nextVersion,
+              errorMessage: ""
+            };
+          case "Progress": {
+            const totalBytes = payload.data.contentLength ?? prev.totalBytes;
+            const downloadedBytes = payload.data.downloaded;
+            const progressPercent = totalBytes && totalBytes > 0
+              ? Math.min((downloadedBytes / totalBytes) * 100, 100)
+              : prev.progressPercent;
+            return {
+              ...prev,
+              stage: "downloading",
+              downloadedBytes,
+              totalBytes,
+              progressPercent
+            };
+          }
+          case "FinishedDownload":
+            return {
+              ...prev,
+              stage: "installing",
+              progressPercent: 100
+            };
+          case "Installing":
+            return {
+              ...prev,
+              stage: "installing",
+              progressPercent: 100
+            };
+          case "Failed":
+            return {
+              ...prev,
+              stage: "error",
+              progressPercent: 0,
+              errorMessage: payload.data.message
+            };
+          default:
+            return prev;
+        }
       });
     });
 
@@ -329,9 +478,33 @@ export default function App() {
       disposed = true;
       unDeep.then(f => f());
       unLog.then(f => f());
+      unFinished.then(f => f());
+      unAppUpdate.then(f => f());
       unExtract.then(f => f());
     };
-  }, [processUrl]);
+  }, [processUrl, addLog]);
+
+  async function handleInstallAppUpdate() {
+    if (appUpdate.stage === "downloading" || appUpdate.stage === "installing") return;
+
+    setAppUpdate(prev => ({
+      ...prev,
+      visible: true,
+      configured: true,
+      stage: prev.stage === "error" ? "available" : prev.stage,
+      errorMessage: ""
+    }));
+
+    try {
+      await invoke("install_app_update");
+    } catch (error: any) {
+      setAppUpdate(prev => ({
+        ...prev,
+        stage: "error",
+        errorMessage: String(error)
+      }));
+    }
+  }
 
   async function handleStartInstall(path: string) {
     if (!activePayload) {
@@ -405,7 +578,8 @@ export default function App() {
       <Header 
         currentView={view} 
         onViewChange={setView} 
-        onLogoClick={() => setView('library')} 
+        onLogoClick={() => setView('library')}
+        interactionLocked={isUpdateBlocking}
       />
 
       <AnimatePresence mode="wait">
@@ -457,6 +631,7 @@ export default function App() {
       </AnimatePresence>
 
       <Footer installPath={downloadState?.installPath} defaultDrive={defaultDrive} />
+      <AppUpdateModal state={appUpdate} onInstall={handleInstallAppUpdate} />
     </div>
   );
 }

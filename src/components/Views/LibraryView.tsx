@@ -88,7 +88,14 @@ export function LibraryView({ defaultDrive }: { defaultDrive: string }) {
   };
 
   if (loading) {
-    return <div className="flex-1 flex items-center justify-center text-slate-500 animate-pulse">CARREGANDO...</div>;
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#0e0e10]">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <Icon name="hourglass_empty" size={64} className="text-slate-600" />
+          <span className="text-sm text-slate-500 tracking-widest font-medium uppercase">Carregando...</span>
+        </div>
+      </div>
+    );
   }
 
   if (games.length === 0) return (
