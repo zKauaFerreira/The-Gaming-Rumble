@@ -12,16 +12,14 @@
   "pages_scraped_target": 89,
   "pages_present_in_json": 89,
   "last_page_in_json": 89,
-  "new_games_found_this_run": 137,
-  "latest_run_new_game_names": [
-    "Beyond Sandbox"
-  ],
-  "processed_games_this_run": 1,
+  "new_games_found_this_run": 136,
+  "latest_run_new_game_names": [],
+  "processed_games_this_run": 0,
   "torrent_files_total": 1710,
   "json_entries_with_torrent": 1710,
   "last_scrape_at": "2026-05-01 19:04:47",
   "last_scrape_at_display": "01/05/2026",
   "last_game_update": "2026-05-01T01:15:03+03:00",
-  "generated_at": "2026-05-01 19:06:38",
-  "generated_at_display": "01/05/2026"
+  "generated_at": "2026-05-02 18:53:36",
+  "generated_at_display": "02/05/2026"
 }
