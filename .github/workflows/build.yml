@@ -35,9 +35,17 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
+      - name: Restore Tauri signing private key
+        env:
+          TAURI_PRIVATE_KEY_FILE: ${{ secrets.TAURI_PRIVATE_KEY_FILE }}
+        shell: pwsh
+        run: |
+          $keyPath = Join-Path $env:RUNNER_TEMP "tauri-signing.key"
+          [System.IO.File]::WriteAllText($keyPath, $env:TAURI_PRIVATE_KEY_FILE.Trim())
+          "TAURI_SIGNING_PRIVATE_KEY_PATH=$keyPath" >> $env:GITHUB_ENV
+
       - name: Build Tauri app
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build
 
