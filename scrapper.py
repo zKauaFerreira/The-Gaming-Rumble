@@ -1067,17 +1067,18 @@ class OnlineFixScraper:
         except Exception:
             return 0
 
-    def _format_game_log_line(self, current_idx, total, name, page_num, torrent_ok, steam_ok, latency_ms, reason, match_via=None):
+    def _format_game_log_line(self, current_idx, total, name, page_num, torrent_ok, steam_ok, latency_ms, reason, match_via=None, run_state=None):
         icon = "✅" if torrent_ok and steam_ok else "❌"
         torrent_status = "OK" if torrent_ok else "!!"
         steam_status = "OK" if steam_ok else "!!"
         safe_reason = (reason or "OK")[:18]
         safe_via = (match_via or "--")[:5]
+        safe_state = (run_state or "--")[:3]
         return (
             f"{icon} "
             f"[{current_idx:04d}/{total:04d}] "
             f"| {name[:25]:<25} "
-            f"| T:{torrent_status} S:{steam_status} G:{safe_via:<5} "
+            f"| T:{torrent_status} S:{steam_status} G:{safe_via:<5} R:{safe_state:<3} "
             f"| {latency_ms:>4}ms "
             f"| P:{page_num:03d} "
             f"| {self._proxy_log_icon()} "
@@ -1085,6 +1086,28 @@ class OnlineFixScraper:
             f"| {safe_reason:<18} "
             f"| {self._format_now('%H:%M:%S')}"
         )
+
+    def _is_game_updated(self, existing_game, current_scraped_game):
+        new_update_info = current_scraped_game.get('update_info')
+        old_update_info = existing_game.get('update_info')
+        new_update_date = current_scraped_game.get('update_date')
+        old_update_date = existing_game.get('update_date')
+        new_formatted_update_date = current_scraped_game.get('formatted_update_date')
+        old_formatted_update_date = existing_game.get('formatted_update_date')
+
+        if (not old_update_info or old_update_info == 'none') and (new_update_info and new_update_info != 'none'):
+            return True
+        if new_update_info and new_update_info != 'none' and new_update_info != old_update_info:
+            return True
+        if new_update_date and old_update_date and new_update_date != old_update_date:
+            return True
+        if not old_update_date and new_update_date:
+            return True
+        if new_formatted_update_date and old_formatted_update_date and new_formatted_update_date != old_formatted_update_date:
+            return True
+        if not old_formatted_update_date and new_formatted_update_date:
+            return True
+        return False
 
     def _get_importance_weight(self, word):
         """Retorna peso de importância para uma palavra (palavras comuns têm peso menor)"""
@@ -1707,6 +1730,7 @@ class OnlineFixScraper:
             except Exception as e:
                 print(f"⚠️ Erro ao carregar banco de dados atual: {e}")
 
+        existing_titles_map = {item['title']: item for item in all_data if item.get('title')}
         new_games = []
         seen_links = set()
 
@@ -1798,6 +1822,8 @@ class OnlineFixScraper:
             last_update = game.get('last_update')  # Extraído do HTML
             release_date = game.get('release_date')
             update_info = game.get('update_info')
+            existing_game_snapshot = existing_titles_map.get(title)
+            run_state = "NEW" if existing_game_snapshot is None else "OLD"
 
             page_dir = os.path.join(TORRENT_DIR, f"batch_{p}")
             os.makedirs(page_dir, exist_ok=True)
@@ -1805,7 +1831,7 @@ class OnlineFixScraper:
             torrent_url, webdav_date, folder_url, torrent_meta = self.find_torrent_robust(title)
             if not torrent_url:
                 latency_ms = int((time.time() - started_at) * 1000)
-                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, torrent_meta.get("reason", "NO_TORRENT_LINK")))
+                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, torrent_meta.get("reason", "NO_TORRENT_LINK"), run_state=run_state))
                 return None
 
             t_resp = None
@@ -1827,13 +1853,13 @@ class OnlineFixScraper:
             if not t_resp or t_resp.status_code != 200:
                 latency_ms = int((time.time() - started_at) * 1000)
                 reason = getattr(t_resp, 'status_code', 'TORRENT_DOWNLOAD_ERR')
-                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, str(reason)))
+                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, str(reason), run_state=run_state))
                 return None
 
             metadata = self.get_torrent_metadata(t_resp.content)
             if not metadata:
                 latency_ms = int((time.time() - started_at) * 1000)
-                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, "BAD_TORRENT_METADATA"))
+                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, "BAD_TORRENT_METADATA", run_state=run_state))
                 return None
 
             filename = os.path.basename(torrent_url)
@@ -1846,22 +1872,28 @@ class OnlineFixScraper:
             )
             torrent_link = self._normalize_torrent_link(torrent_link)
 
-            steam, _ = self.get_steam_data(title, verbose=False)
-            steam_ok = bool(steam and not steam.get('not_found'))
-            latency_ms = int((time.time() - started_at) * 1000)
-            reason = "OK" if steam_ok else steam.get('reason', 'NO_STEAM_MATCH')
-            match_via = steam.get('match_via') if steam_ok and isinstance(steam, dict) else None
-            print(self._format_game_log_line(current_idx, total_games, title, p, True, steam_ok, latency_ms, str(reason), match_via))
-
-            return {
+            current_scraped_game = {
                 "title": title,
                 "page": p,
                 "url": href,
                 "last_update": last_update,
                 "release_date": release_date,
                 "update_info": update_info,
-                "update_date": game.get('update_date'),  # Adicionando a data de atualização extraída
-                "formatted_update_date": game.get('formatted_update_date'),  # Data formatada no estilo created_at
+                "update_date": game.get('update_date'),
+                "formatted_update_date": game.get('formatted_update_date'),
+            }
+            if existing_game_snapshot is not None and self._is_game_updated(existing_game_snapshot, current_scraped_game):
+                run_state = "UPD"
+
+            steam, _ = self.get_steam_data(title, verbose=False)
+            steam_ok = bool(steam and not steam.get('not_found'))
+            latency_ms = int((time.time() - started_at) * 1000)
+            reason = "OK" if steam_ok else steam.get('reason', 'NO_STEAM_MATCH')
+            match_via = steam.get('match_via') if steam_ok and isinstance(steam, dict) else None
+            print(self._format_game_log_line(current_idx, total_games, title, p, True, steam_ok, latency_ms, str(reason), match_via, run_state))
+
+            return {
+                **current_scraped_game,
                 "unique_hash": metadata["unique_hash"],
                 "fileSize": metadata["total_size"],
                 "magnet": metadata["magnet"],
