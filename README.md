@@ -20,41 +20,132 @@ Este projeto automatiza toda a pipeline de coleta dos jogos do Online-Fix:
 - Publica `online_fix_games.json` como dataset principal
 - Publica `stats.json` para badges, automações e consumo externo
 
-## 🌍 Aviso Público Do Dataset
+## 🌍 Public Dataset Notice
 
 > [!IMPORTANT]
-> Este repositório é público, e o dataset gerado também é público.
+> Este repositório é totalmente público.
 >
-> **Dataset principal**
-> `online_fix_games.json`
->
-> **URL raw direta**
-> [https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json](https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json)
->
-> **Snapshot do catálogo Steam**
-> [https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/steam_applist_full.json](https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/steam_applist_full.json)
->
-> **Agenda de atualização**
-> O dataset é atualizado automaticamente todos os dias via GitHub Actions, atualmente por volta de **18:00 UTC**.
->
-> **Uso recomendado**
-> Para evitar várias requisições repetidas ao raw do GitHub e reduzir a chance de rate limit, o ideal é baixar o JSON primeiro e consumi-lo localmente por arquivo, cache ou banco de dados.
+> Todos os datasets, torrents indexados e snapshots publicados nesta branch podem ser acessados livremente via GitHub Raw.
 
-### ⬇️ Recomendado: Baixe O JSON Localmente Primeiro
+---
 
-Usando `curl`:
+## 📦 Datasets Públicos
+
+| Arquivo | Descrição |
+|---|---|
+| `online_fix_games.json` | Dataset principal contendo jogos, torrents e metadados Steam |
+| `steam_applist_full.json` | Snapshot completo do catálogo local da Steam |
+| `stats.json` | Estatísticas do scraper usadas por badges e dashboards |
+
+### URLs Raw
+
+| Tipo | URL |
+|---|---|
+| Dataset principal | `https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json` |
+| Snapshot Steam | `https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/steam_applist_full.json` |
+| Estatísticas | `https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/stats.json` |
+
+---
+
+## 🔄 Frequência De Atualização
+
+O pipeline executa automaticamente via GitHub Actions.
+
+| Processo | Frequência |
+|---|---|
+| Atualização do dataset | diária |
+| Atualização do catálogo Steam | automática |
+| Publicação dos torrents | contínua durante o scrape |
+
+> Horário médio atual: **~18:00 UTC**
+
+---
+
+## ⚠️ Uso Recomendado
+
+> [!WARNING]
+> Evite consumir o GitHub Raw diretamente em alta frequência.
+>
+> Requisições repetidas podem causar:
+>
+> - rate limit
+> - cache agressivo
+> - aumento de latência
+> - bloqueios temporários
+
+O recomendado é:
+
+1. baixar o JSON uma vez
+2. salvar localmente
+3. consumir via cache, banco ou arquivo local
+
+---
+
+## ⬇️ Exemplo Recomendado
+
+### Usando `curl`
 
 ```bash
-curl -L "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json" -o online_fix_games.json
+curl -L \
+  "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json" \
+  -o online_fix_games.json
 ```
 
-Usando `wget`:
+### Usando `wget`
 
 ```bash
-wget -O online_fix_games.json "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json"
+wget -O online_fix_games.json \
+  "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json"
 ```
 
-Depois disso, carregue o arquivo local no seu script, app, API ou rotina de banco, em vez de bater na URL raw a cada requisição.
+---
+
+## 💻 Exemplo De Consumo Local
+
+### Python
+
+```python
+import json
+
+with open("online_fix_games.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+print(data["total"])
+```
+
+### Node.js
+
+```js
+import fs from "fs";
+
+const raw = fs.readFileSync("online_fix_games.json", "utf-8");
+const data = JSON.parse(raw);
+
+console.log(data.total);
+```
+
+---
+
+## 🚫 O Que Evitar
+
+```txt
+❌ Fazer download do JSON a cada request da sua API
+❌ Polling agressivo no GitHub Raw
+❌ Consumir sem cache
+❌ Rebaixar milhares de vezes por minuto
+```
+
+---
+
+## ✅ Boas Práticas
+
+```txt
+✅ Cache local
+✅ Atualização agendada
+✅ Banco de dados local
+✅ CDN própria
+✅ Sync periódico
+```
 
 ## 🧠 Saídas Principais
 
@@ -66,7 +157,7 @@ Depois disso, carregue o arquivo local no seu script, app, API ou rotina de banc
 | `low_confidence_matches.json` | Log circular dos casos rejeitados por baixa confiança para revisão e re-treino |
 | `torrents/batch_*/*.torrent` | Arquivos torrent salvos e agrupados por página |
 
-## 🗂️ Estrutura Do Dataset
+## 🗂 Estrutura Do Dataset
 
 ### `online_fix_games.json`
 
@@ -174,6 +265,7 @@ Quando existe um match confiável com a Steam, o campo `steam` fica assim:
 {
   "steam_appid": 1015140,
   "match_score": 92,
+  "match_via": "canon",
   "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1015140/header.jpg",
   "short_description": "O Apocalipse chegou e seu objetivo é simples...",
   "short_description_native": "The apocalypse is here and your goal is simple...",
@@ -211,29 +303,40 @@ Este arquivo foi pensado para ser amigável com badges.
   "repo": "zKauaFerreira/The-Gaming-Rumble",
   "branch": "games",
   "raw_base_url": "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/games/torrents/",
-  "total_games": 1679,
-  "online_fix_total": 1679,
-  "steam_with_metadata": 243,
-  "steam_without_metadata": 1436,
-  "match_rate": 14.47,
-  "success_rate": 85.53,
-  "online_fix_pages_total": 53,
-  "pages_scraped_target": 53,
-  "pages_present_in_json": 53,
-  "last_page_in_json": 53,
-  "new_games_found_this_run": 21,
-  "processed_games_this_run": 20,
-  "torrent_files_total": 1679,
-  "json_entries_with_torrent": 1679,
-  "last_scrape_at": "2026-04-23 17:32:10",
-  "last_game_update": "2026-04-23 16:58:00",
-  "generated_at": "2026-04-23 17:32:10"
+  "total_games": 1717,
+  "online_fix_total": 1717,
+  "steam_with_metadata": 1607,
+  "steam_without_metadata": 110,
+  "match_rate": 93.59,
+  "success_rate": 93.59,
+  "online_fix_pages_total": 90,
+  "pages_scraped_target": 90,
+  "pages_present_in_json": 89,
+  "last_page_in_json": 89,
+  "new_games_found_this_run": 138,
+  "new_games_added_to_json_this_run": 4,
+  "latest_run_new_game_names": [
+    "RoadCraft",
+    "SnowRunner",
+    "Bus Bound",
+    "Expeditions A MudRunner Game"
+  ],
+  "updated_games_this_run": 0,
+  "latest_run_updated_game_names": [],
+  "processed_games_this_run": 4,
+  "torrent_files_total": 1717,
+  "json_entries_with_torrent": 1717,
+  "last_scrape_at": "2026-05-06 16:30:21",
+  "last_scrape_at_display": "06/05/2026",
+  "last_game_update": "2026-05-06T19:15:28+03:00",
+  "generated_at": "2026-05-06 16:32:03",
+  "generated_at_display": "06/05/2026"
 }
 ```
 
 </details>
 
-## 🏗️ Como A Pipeline Funciona
+##  Como A Pipeline Funciona
 
 ```mermaid
 flowchart LR
@@ -250,7 +353,7 @@ flowchart LR
   J --> K["Badges do README"]
 ```
 
-## 🔎 Notas Sobre O Fuzzy Matching
+##  Notas Sobre O Fuzzy Matching
 
 O matcher da Steam é propositalmente conservador.
 
@@ -377,7 +480,7 @@ As regras de segurança continuam mandando no resultado final:
 | Suíte automática do catálogo Steam | `223/237` positivos e `160/160` negativos |
 
 > [!NOTE]
-> O alvo real do projeto não é “IA pura”, e sim **matching confiável em runner**. O resultado forte vem da combinação entre fuzzy, classificador leve, aliases curados e guard rails de franquia/número.
+> O alvo real do projeto não é “IA pura, e sim **matching confiável em runner**. O resultado forte vem da combinação entre fuzzy, classificador leve, aliases curados e guard rails de franquia/número.
 
 ### O que a suíte do catálogo mede
 
@@ -397,7 +500,7 @@ Os números mais importantes dessa suíte são:
 | Positivos por catálogo | `223/237` |
 | Negativos por conflito de franquia/número | `160/160` |
 
-Os positivos que ainda falham não costumam ser “erro bruto” do modelo. Em geral são casos em que a transformação deixa o nome ambíguo demais, por exemplo:
+Os positivos que ainda falham não costumam ser “erro bruto do modelo. Em geral são casos em que a transformação deixa o nome ambíguo demais, por exemplo:
 
 - título delistado ou legado que só existe na Steam com um subtítulo/classificador específico
 - nome base genérico demais depois de remover `(...)`
@@ -416,8 +519,9 @@ O processamento da fase 2 agora prioriza uma linha compacta por jogo, reduzindo 
 Exemplo:
 
 ```text
-✅ [0012/1500] | Ghost of Tsushima         | T:OK S:OK |  450ms | P:005 | 🌐 | M:   0MB | OK                 | 00:57:22
-❌ [0013/1500] | Forza Horizon 4           | T:OK S:!! | 2100ms | P:005 | 🌐 | M:   0MB | low_confidence     | 00:57:22
+✅ [0002/0138] | RoadCraft                 | T:OK S:OK G:canon R:NEW | 4257ms | P:001 | 🌐 | M: 260MB | OK                 | 16:30:20
+✅ [0007/0138] | Some Existing Game        | T:OK S:OK G:model R:UPD | 3200ms | P:004 | 🌐 | M: 260MB | OK                 | 16:30:20
+❌ [0009/0138] | Old Existing Game         | T:!! S:!! G:--    R:OLD | 1600ms | P:004 | 🌐 | M: 260MB | 401                | 16:30:21
 ```
 
 ### Campos da linha
@@ -429,12 +533,14 @@ Exemplo:
 | nome | título truncado para leitura rápida |
 | `T:OK / T:!!` | status do torrent |
 | `S:OK / S:!!` | status do match Steam |
+| `G:canon / alias / model / fuzzy / --` | origem do match Steam |
+| `R:NEW / UPD / OLD` | se o item é novo, update ou apenas já conhecido |
 | `ms` | latência total por jogo |
 | `P:NNN` | página de origem no Online-Fix |
 | `🌐 / 🏠` | proxy ativo ou conexão local |
 | `M:NNNMB` | memória do processo quando disponível |
 | motivo final | resumo do resultado ou da falha |
-| horário | timestamp local da linha |
+| horário | timestamp local da linha em `America/Sao_Paulo` |
 
 ### Motivos finais mais comuns
 
@@ -452,9 +558,9 @@ Exemplo:
 - reduzir spam de logs intermediários
 - concentrar tudo que importa em uma linha por jogo
 - facilitar debug visual em terminal, runner e GitHub Actions
-- deixar latência, rede e motivo do erro visíveis sem precisar abrir stacktrace
+- deixar latência, rede, origem do match e status de `new/update` visíveis sem precisar abrir stacktrace
 
-## ⚙️ Configuração Local
+## ⚙ Configuração Local
 
 ### Requisitos
 
@@ -471,6 +577,8 @@ cloudscraper
 bencode.py
 rapidfuzz
 python-dotenv
+psutil
+tzdata
 ```
 
 ### Variáveis de ambiente
@@ -571,6 +679,8 @@ Consultas úteis:
 | Online-Fix Pages | `%24.online_fix_pages_total` |
 | Torrent Files | `%24.torrent_files_total` |
 | Last Update | `%24.last_scrape_at_display` |
+| New Added This Run | `%24.new_games_added_to_json_this_run` |
+| Updated This Run | `%24.updated_games_this_run` |
 | JSON Torrents | `%24.json_entries_with_torrent` |
 | Last Page | `%24.last_page_in_json` |
 
@@ -594,7 +704,7 @@ Consultas úteis:
 └── README.md
 ```
 
-## 🛠️ Notas Operacionais
+## 🛠 Notas Operacionais
 
 - O site alvo retorna conteúdo não UTF-8 em algumas respostas
 - O bypass do Cloudflare usa `cloudscraper` quando disponível
@@ -602,7 +712,7 @@ Consultas úteis:
 - Rotação de proxies ajuda a reduzir rate limit nas chamadas da Steam
 - Os links raw de torrent são normalizados para este repositório e para a branch `games`
 
-## ⚠️ Importante
+## ⚠ Importante
 
 > [!WARNING]
 > Não faça commit de credenciais reais, cookies ou listas privadas de proxy neste repositório.
