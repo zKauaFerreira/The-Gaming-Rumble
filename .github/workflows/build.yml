@@ -35,9 +35,31 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
+      - name: Validate updater signing key early
+        env:
+          TAURI_PRIVATE_KEY_FILE: ${{ secrets.TAURI_PRIVATE_KEY_FILE }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_PRIVATE_KEY_FILE)) {
+            throw "TAURI_PRIVATE_KEY_FILE secret is empty."
+          }
+
+          $normalized = ($env:TAURI_PRIVATE_KEY_FILE -replace '\s', '')
+
+          try {
+            $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($normalized))
+          } catch {
+            throw "TAURI_PRIVATE_KEY_FILE is not valid base64 after whitespace normalization."
+          }
+
+          if (-not $decoded.StartsWith("untrusted comment: rsign encrypted secret key")) {
+            throw "Decoded updater key has unexpected header."
+          }
+
+          "TAURI_SIGNING_PRIVATE_KEY=$normalized" >> $env:GITHUB_ENV
+
       - name: Build Tauri app
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY_FILE }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build
 
