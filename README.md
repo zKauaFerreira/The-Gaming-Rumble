@@ -340,17 +340,30 @@ Este arquivo foi pensado para ser amigável com badges.
 
 ```mermaid
 flowchart LR
-  A["Páginas do Online-Fix"] --> B["scrapper.py"]
-  B --> C["Extrai os dados da página"]
-  B --> D["Baixa arquivos .torrent"]
-  B --> E["Lê os metadados do torrent"]
-  B --> F["Compara com steam_applist_full.json"]
-  F --> G["Steam appdetails"]
-  C --> H["online_fix_games.json"]
-  D --> I["torrents/batch_*"]
+  %% Fonte
+  OF["🌐 online-fix.me"] -->|login + AJAX pages| B["scrapper.py\n(6 workers)"]
+
+  %% Steam Catalog (pré-requisito)
+  SA["steam_applist.py"] -->|200k+ apps| APPLIST[("steam_applist_full.json")]
+  APPLIST -->|índice local| B
+
+  %% Processamento
+  B --> C["Extrai dados\n(título, datas, links)"]
+  B --> D["Baixa .torrent\n(WebDAV + fallbacks)"]
+  D --> E["Metadados torrent\n(bencode → hash, magnet, files)"]
+  B --> F["Match Steam\n(fuzzy + ML Guard)"]
+  F -->|appid confirmado| G["Steam appdetails\n+ Translate PT-BR"]
+
+  %% Outputs
+  C --> H[("online_fix_games.json\n1700+ jogos")]
+  E --> H
   G --> H
-  H --> J["stats.json"]
-  J --> K["Badges do README"]
+  D --> I[("torrents/batch_1..N/")]
+  H --> J[("stats.json")]
+  J -->|Shields.io dynamic/json| K["🏷️ Badges do README"]
+
+  %% Git
+  H & I & J -->|commit & push| GIT["🔄 branch games"]
 ```
 
 ##  Notas Sobre O Fuzzy Matching
