@@ -76,16 +76,12 @@ pub fn play_game(executable: String) -> Result<(), String> {
 pub fn open_path(path: String, select_file: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        let select_target = PathBuf::from(&select_file);
-        let folder_target = PathBuf::from(&path);
-
         let mut cmd = Command::new("explorer");
-        if select_target.is_file() {
-            cmd.arg(format!("/select,{}", select_target.to_string_lossy()));
-        } else if folder_target.is_dir() {
-            cmd.arg(folder_target);
-        } else if let Some(parent) = select_target.parent().filter(|parent| parent.is_dir()) {
+
+        if let Some(parent) = PathBuf::from(&select_file).parent().filter(|parent| parent.is_dir()) {
             cmd.arg(parent);
+        } else if let Some(existing_dir) = sanitize_existing_dir(&path) {
+            cmd.arg(existing_dir);
         } else {
             return Err("Falha ao abrir pasta: caminho invalido".into());
         }
