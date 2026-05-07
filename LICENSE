@@ -1,19 +1,34 @@
-This software is provided "AS IS", without warranty of any kind, express or
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+Gaming Rumble Engine License
 
-This client does NOT own, host, distribute, or facilitate access to any
-copyrighted content. Magnet links are consumed via the `gaming-rumble://`
-protocol and the app solely automates the technical process of download
-and extraction.
+Copyright (c) 2026 Gaming Rumble Engine.
+All rights reserved.
 
-NO SUPPORT is provided for issues related to content accessed through
-this client. Usage is at your own risk.
+This software and its source code are proprietary and confidential.
 
-The authors shall not be liable for copyright violations, direct, indirect,
-or incidental damages arising from the use of this software.
+Permission is granted to use this software for personal, educational,
+research, and evaluation purposes only. Redistribution, sublicensing,
+commercial usage, resale, or modification without explicit written
+permission from the authors is prohibited.
 
-By using this client, you agree to assume full responsibility for any
-content you access and install.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
 
-Gaming Rumble Engine (c) 2026 - All rights reserved.
+This project does not host, distribute, sell, or provide copyrighted
+content. Any metadata, magnet links, torrent references, indexes, or
+automation handled by this software are processed strictly as technical
+data supplied by users or third-party sources.
+
+Users are solely responsible for any content accessed, downloaded,
+processed, installed, or distributed through this software.
+
+The authors and contributors shall not be liable for copyright violations,
+data loss, service interruptions, account restrictions, or any direct,
+indirect, incidental, special, exemplary, or consequential damages arising
+from the use or misuse of this software.
+
+No support is provided for third-party content, external services,
+downloads, torrents, or unauthorized usage scenarios.
+
+By using this software, you agree to assume full responsibility for your
+actions and usage of the software.
