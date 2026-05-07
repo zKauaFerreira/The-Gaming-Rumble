@@ -559,12 +559,19 @@ class OnlineFixScraper:
             self.session.cookies.set(cookie.name, cookie.value, domain='uploads.online-fix.me')
 
     def clean_name_for_url(self, title):
-        name = re.sub(r'\s*по сети\s*', '', title, flags=re.I).strip()
+        name = self._normalize_game_title(title)
         # Normaliza diferentes tipos de apóstrofos e aspas para o padrão simples '
         name = name.replace('’', "'").replace('‘', "'").replace('´', "'").replace('`', "'")
         # Remove caracteres problemáticos mas mantém o básico (incluindo o apóstrofo simples)
         name = re.sub(r"[^a-zA-Z0-9\s.'&-]", '', name).strip()
         return name
+
+    def _normalize_game_title(self, title):
+        title = str(title or "")
+        title = re.sub(r'\s*по сети\s*', '', title, flags=re.I).strip()
+        title = re.sub(r'\s+Online\s*$', '', title, flags=re.I).strip()
+        title = re.sub(r'\s+', ' ', title).strip()
+        return title
 
     def get_max_page(self):
         """Descobre N batches AJAX válidos com conteúdo, retorna N+1 (DOM page 1)."""
@@ -1118,7 +1125,7 @@ class OnlineFixScraper:
         return 0.1 if word in common_words else 1.0
 
     def _search_variations(self, name):
-        base = re.sub(r'\s*по сети\s*', '', name, flags=re.I).strip()
+        base = self._normalize_game_title(name)
         words = base.split()
 
         # Variações inteligentes de busca
@@ -1358,7 +1365,7 @@ class OnlineFixScraper:
     def get_steam_data(self, title, verbose=False):
         """Obtém metadados da Steam usando catálogo local (offline, zero rate limit)."""
         # Normalização
-        raw_clean = re.sub(r'\s*по сети\s*', '', title, flags=re.I).strip()
+        raw_clean = self._normalize_game_title(title)
         clean = self._normalize(raw_clean)
 
         # URL para referência (compatibilidade)
@@ -1474,7 +1481,7 @@ class OnlineFixScraper:
         self._set_webdav_cookies()
         last_reason = {"reason": "NO_TORRENT_LINK", "status_code": 404}
         # Normaliza o título base
-        name_base = re.sub(r'\s*по сети\s*', '', title, flags=re.I).strip()
+        name_base = self._normalize_game_title(title)
         name_base = name_base.replace('’', "'").replace('‘', "'").replace('´', "'").replace('`', "'")
 
         clean_name = self.clean_name_for_url(title)
@@ -1653,7 +1660,7 @@ class OnlineFixScraper:
             if time_tag and time_tag.get('datetime'):
                 last_update = time_tag['datetime'].strip()
 
-            clean_title = re.sub(r'\s*по сети\s*', '', title, flags=re.I).strip()
+            clean_title = self._normalize_game_title(title)
             preview_text_tag = art.find('div', class_='preview-text')
             release_date = None
             if preview_text_tag:
@@ -1722,6 +1729,8 @@ class OnlineFixScraper:
                     old_json = json.load(f)
                     all_data = old_json.get('downloads', [])
                     for item in all_data:
+                        if item.get('title'):
+                            item['title'] = self._normalize_game_title(item['title'])
                         if 'url' in item:
                             existing_links.add(item['url'])
                         if item.get('torrent_file'):
