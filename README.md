@@ -1,5 +1,10 @@
 # 🎮 Gaming Rumble (Scrapper)
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/main/public/banner.png" alt="Gaming Rumble Banner" width="100%" />
+</p>
+<br>
+
 > Pipeline automatizado para indexar jogos do Online-Fix, salvar arquivos `.torrent` neste repositório, enriquecer correspondências confiáveis com metadados da Steam e publicar um dataset pronto para consumo por apps, APIs, badges e dashboards.
 
 ## ✨ Snapshot Ao Vivo
