@@ -16,7 +16,33 @@
 
 ---
 
-## 📌 O Que Este Repositório Faz
+## 📋 Índice
+
+<details open>
+<summary><b>Clique para expandir/recolher</b></summary>
+
+- 📖 [Sobre o Projeto](#-sobre-o-projeto)
+- ⚠️ [Compatibilidade](#️-compatibilidade)
+- 🧭 [Fluxo Completo Do Produto](#-fluxo-completo-do-produto)
+- ✨ [Recursos Principais](#-recursos-principais)
+- 🧠 [Como O Fluxo Funciona](#-como-o-fluxo-funciona)
+- 🧱 [Stack Atual](#-stack-atual)
+- 📦 [Binários Externos](#-binários-externos)
+- 🖥️ [Plataforma Suportada](#️-plataforma-suportada)
+- 🗂️ [Estrutura Do Projeto](#️-estrutura-do-projeto)
+- ⚙️ [Configuração Local](#️-configuração-local)
+- 🚀 [Desenvolvimento](#-desenvolvimento)
+- 📦 [Build E Release](#-build-e-release)
+- 🧠 [Comportamentos Técnicos](#-comportamentos-técnicos)
+- 🛠️ [Notas Operacionais](#️-notas-operacionais)
+- ⚠️ [Aviso Legal](#️-aviso-legal)
+- 📜 [Licença](#-licença)
+
+</details>
+
+---
+
+## 📖 Sobre o Projeto
 
 O Gaming Rumble é o client desktop principal do ecossistema.
 
@@ -52,14 +78,14 @@ O foco do projeto é reduzir atrito e automatizar processos repetitivos.
 
 ```mermaid
 flowchart LR
-  A["🌐 GR-Link / Browser"] --> B["gaming-rumble://"]
+  A["🌐 Browser / Discord"] --> B["🚀 gaming-rumble://"]
   B --> C["📦 Decode Payload"]
-  C --> D["⚙ Setup"]
-  D --> E["⬇ Download via aria2c"]
-  E --> F["📂 Extração 7-Zip"]
-  F --> G["🧠 Detecta Executável"]
-  G --> H["🎮 Biblioteca Local"]
-  H --> I["🚀 Jogar / Abrir"]
+  C --> D["⚙️ Setup"]
+  D --> E["⬇️ aria2c Download"]
+  E --> F["📂 7-Zip Extract"]
+  F --> G["🧠 Detect Executable"]
+  G --> H["🎮 Local Library"]
+  H --> I["🚀 Launch Game"]
 ```
 
 ---
@@ -247,14 +273,23 @@ src-tauri/target/release/bundle/nsis/
 
 ### Pipeline CI/CD
 
-O workflow da branch `main`:
+```mermaid
+flowchart LR
+  A["📦 Push na main"] --> B["⚙️ GitHub Actions"]
+  B --> C["📥 Install Node.js"]
+  C --> D["🦀 Install Rust"]
+  D --> E["🪟 Install WebView2"]
+  E --> F["🔨 Build Tauri"]
+  F --> G["📦 Generate MSI / NSIS"]
+  G --> H["🚀 GitHub Release"]
+```
 
-- instala Node.js
-- instala Rust stable
-- instala WebView2
-- gera build Tauri
-- publica artefatos
-- cria releases automaticamente
+O workflow automatiza:
+
+- instalação do ambiente
+- geração dos bundles
+- upload de artefatos
+- criação de releases
 
 ---
 
