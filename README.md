@@ -738,12 +738,3 @@ Consultas úteis:
 Este repositório é disponibilizado apenas para fins educacionais e de pesquisa.
 
 Veja a licença completa e o aviso legal em [LICENSE](C:/Users/Administrator/Pictures/Gaming-Rumble/LICENSE).
-
-### Resumo do aviso
-
-> [!WARNING]
-> Este software é fornecido **"AS IS"**, sem garantia de qualquer tipo, expressa ou implícita, incluindo, mas não se limitando, a comercialização, adequação a um propósito específico e não violação.
->
-> Os autores não se responsabilizam por mau uso, violações de direitos autorais ou quaisquer danos diretos, indiretos, incidentais ou consequentes decorrentes do uso deste projeto.
->
-> Ao usar este repositório, você assume total responsabilidade por qualquer conteúdo que acessar, processar ou instalar.
