@@ -1,749 +1,405 @@
-# 🎮 Gaming Rumble (Scrapper)
+# 🤖 Gaming Rumble (Discord Bot)
 
-> Pipeline automatizado para indexar jogos do Online-Fix, salvar arquivos `.torrent` neste repositório, enriquecer correspondências confiáveis com metadados da Steam e publicar um dataset pronto para consumo por apps, APIs, badges e dashboards.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/main/public/banner.png" alt="Gaming Rumble Banner" width="100%" />
+</p>
 
-## ✨ Snapshot Ao Vivo
+<br>
 
-| Total de Jogos | Steam Encontrados | Steam Ausentes | Success Rate | Páginas Online-Fix | Arquivos Torrent | Último Update |
-|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.total_games&label=%20&color=2ea44f&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_with_metadata&label=%20&color=1f6feb&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_without_metadata&label=%20&color=d73a49&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.success_rate&suffix=%25&label=%20&color=8250df&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.online_fix_pages_total&label=%20&color=fb8500&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.torrent_files_total&label=%20&color=0a9396&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.last_scrape_at_display&label=%20&color=6f42c1&style=flat-square) |
+> Bot Discord em Python para consulta do catálogo do Gaming Rumble, com busca fuzzy em tempo real, embeds interativas, canal dedicado de descoberta, painel administrativo e integração automática com os datasets públicos do projeto.
 
-## 📌 O Que Este Repositório Faz
+## ✨ Snapshot Do Projeto
 
-Este projeto automatiza toda a pipeline de coleta dos jogos do Online-Fix:
-
-- Faz scrape das páginas em `online-fix.me`
-- Baixa e armazena arquivos `.torrent` dentro do repositório
-- Extrai metadados do torrent como BTIH, lista de arquivos e magnet link
-- Tenta encontrar o jogo no catálogo local da Steam
-- Busca `appdetails` da Steam apenas para matches confiáveis
-- Publica `online_fix_games.json` como dataset principal
-- Publica `stats.json` para badges, automações e consumo externo
-
-## 🌍 Public Dataset Notice
-
-> [!IMPORTANT]
-> Este repositório é totalmente público.
->
-> Todos os datasets, torrents indexados e snapshots publicados nesta branch podem ser acessados livremente via GitHub Raw.
+| Linguagem | Framework | Dataset | UI | Runtime |
+|:---:|:---:|:---:|:---:|:---:|
+| ![](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white) | ![](https://img.shields.io/badge/discord.py-2.5%2B-5865F2?style=flat-square&logo=discord&logoColor=white) | ![](https://img.shields.io/badge/JSON-online__fix__games-0a9396?style=flat-square) | ![](https://img.shields.io/badge/Embeds-Interactive-8250df?style=flat-square) | ![](https://img.shields.io/badge/Linux%20%26%20Windows-Compatible-2ea44f?style=flat-square) |
 
 ---
 
-## 📦 Datasets Públicos
+## 📋 Índice
 
-| Arquivo | Descrição |
+<details open>
+<summary><b>Clique para expandir/recolher</b></summary>
+
+- 📖 [Sobre o Projeto](#-sobre-o-projeto)
+- ✨ [Funcionalidades](#-funcionalidades)
+- 🧱 [Arquitetura](#-arquitetura)
+- 🤖 [Fluxo Principal No Discord](#-fluxo-principal-no-discord)
+- 📡 [Datasets Consumidos](#-datasets-consumidos)
+- ⚙️ [Configuração Via Comandos](#️-configuração-via-comandos)
+- 🚀 [Pré-requisitos](#-pré-requisitos)
+- 📦 [Instalação](#-instalação)
+- 💻 [Executando O Projeto](#-executando-o-projeto)
+- 🔄 [Sincronização Do Catálogo](#-sincronização-do-catálogo)
+- 🧩 [Mensagens Rotativas De Atividade](#-mensagens-rotativas-de-atividade)
+- 🗂️ [Estrutura Do Projeto](#️-estrutura-do-projeto)
+- 🛠️ [Notas Operacionais](#️-notas-operacionais)
+- 🤝 [Contribuindo](#-contribuindo)
+- 📄 [Licença](#-licença)
+
+</details>
+
+---
+
+## 📖 Sobre o Projeto
+
+O Discord Bot do Gaming Rumble foi criado para transformar o dataset do projeto em uma experiência interativa dentro do Discord.
+
+Ele atua como camada de consulta, descoberta e compartilhamento entre:
+
+- catálogo público do scraper
+- servidor Discord
+- embeds de jogo
+- GR-Link / Desktop Client
+
+O objetivo do bot é reduzir atrito no fluxo de descoberta de jogos.
+
+Em vez de navegar manualmente pelo dataset, o usuário pode:
+
+- digitar o nome do jogo no canal configurado
+- usar `/buscar jogo` com autocomplete
+- receber embeds efêmeras com botões de ação
+- compartilhar resultados publicamente com expiração automática
+
+---
+
+## ✨ Funcionalidades
+
+| Feature | Descrição |
 |---|---|
-| `online_fix_games.json` | Dataset principal contendo jogos, torrents e metadados Steam |
-| `steam_applist_full.json` | Snapshot completo do catálogo local da Steam |
-| `stats.json` | Estatísticas do scraper usadas por badges e dashboards |
+| Busca Fuzzy | Pesquisa jogos por slash command ou mensagem normal |
+| Autocomplete | `/buscar jogo` sugere resultados em tempo real |
+| Canal Dedicado | O bot pode operar em um canal configurado exclusivamente para busca |
+| Confirmação Inteligente | Match exato mostra confirmação; match ambíguo mostra seleção |
+| Embeds Interativas | Cards com banner, descrição, tamanho, atualização e controle |
+| Requisitos On Demand | Botão que abre requisitos mínimos e recomendados |
+| Compartilhamento Público | Compartilha o jogo em outro canal com expiração configurável |
+| Catálogo Paginado | Navegação por páginas via botão no painel principal |
+| Emoji Configurável | Emojis de botões e avisos configuráveis por painel |
+| Permissões por Cargo | Controle fino para admin, busca e compartilhamento |
+| Sync De Dataset | Atualiza `online_fix_games.json` e `stats.json` via script separado |
+| Auto Refresh | Painel principal é re-renderizado quando o dataset muda |
+| Presença Rotativa | Status do bot com placeholders dinâmicos |
 
-### URLs Raw
+---
+
+## 🧱 Arquitetura
+
+```mermaid
+flowchart LR
+  A["👤 Usuário no Discord"] --> B["💬 /buscar jogo ou mensagem no canal"]
+  B --> C["🧠 GameService"]
+  C --> D["📦 online_fix_games.json"]
+  C --> E["📊 stats.json"]
+
+  C --> F["🎴 Embeds + Views"]
+  F --> G["🔗 GR-Link / Desktop Client"]
+  F --> H["📣 Compartilhamento público"]
+
+  I["⚙️ /config, /bot, /emoji, /canal"] --> J["🗂️ config.json"]
+  J --> F
+  J --> K["🤖 Permissões / Presença / Painel principal"]
+```
+
+---
+
+## 🤖 Fluxo Principal No Discord
+
+### Busca por slash command
+
+```txt
+1. Usuário abre /buscar jogo
+2. O autocomplete sugere resultados do catálogo
+3. O usuário escolhe um item
+4. O bot responde com embed efêmera do jogo
+5. A embed pode abrir requisitos ou compartilhar o jogo
+```
+
+### Busca por mensagem no canal do bot
+
+```txt
+1. Usuário digita o nome do jogo no canal configurado
+2. A mensagem é apagada pelo bot
+3. O bot faz o fuzzy matching
+4. Se houver match exato:
+   → mostra confirmação pública com expiração
+
+5. Se houver ambiguidade:
+   → mostra select com até 5 opções
+
+6. Ao confirmar ou selecionar:
+   → o bot envia a embed final em mensagem efêmera
+```
+
+---
+
+## 📡 Datasets Consumidos
+
+O bot usa os mesmos arquivos públicos gerados pelo ecossistema Gaming Rumble:
+
+| Arquivo | Função |
+|---|---|
+| `online_fix_games.json` | Fonte principal de jogos, magnet, arquivos e metadados Steam |
+| `stats.json` | Estatísticas do catálogo para painel principal e placeholders |
+| `config.json` | Configuração persistente do bot por servidor |
+| `requirements_translations.json` | Traduções e normalizações dos requisitos de sistema |
+
+### URLs padrão usadas no sync
 
 | Tipo | URL |
 |---|---|
 | Dataset principal | `https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json` |
-| Snapshot Steam | `https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/steam_applist_full.json` |
 | Estatísticas | `https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/stats.json` |
 
 ---
 
-## 🔄 Frequência De Atualização
+## ⚙️ Configuração Via Comandos
 
-O pipeline executa automaticamente via GitHub Actions.
+### Comandos principais
 
-| Processo | Frequência |
+| Comando | Descrição |
 |---|---|
-| Atualização do dataset | diária |
-| Atualização do catálogo Steam | automática |
-| Publicação dos torrents | contínua durante o scrape |
+| `/buscar jogo` | Busca direta com autocomplete |
+| `/canal criar` | Cria o canal oficial do bot |
+| `/canal setar` | Define um canal existente como canal do bot |
+| `/canal ver` | Mostra o canal configurado |
+| `/canal atualizar` | Atualiza a mensagem principal do painel |
+| `/config adm` | Gerencia cargos com acesso administrativo |
+| `/config buscar` | Gerencia cargos autorizados a buscar jogos |
+| `/config messages` | Configura mensagens rotativas de atividade |
+| `/bot config` | Painel geral de timeout, cargos e comportamento |
+| `/emoji adicionar` | Adiciona emoji ao servidor por URL ou arquivo |
+| `/emoji config` | Configura emojis usados pelo bot |
+| `/clear` | Limpa o canal do bot preservando o painel principal |
+| `/ping` | Verifica latência do bot |
 
-> Horário médio atual: **~18:00 UTC**
+### O que o `/bot config` controla
 
----
-
-## ⚠️ Uso Recomendado
-
-> [!WARNING]
-> Evite consumir o GitHub Raw diretamente em alta frequência.
->
-> Requisições repetidas podem causar:
->
-> - rate limit
-> - cache agressivo
-> - aumento de latência
-> - bloqueios temporários
-
-O recomendado é:
-
-1. baixar o JSON uma vez
-2. salvar localmente
-3. consumir via cache, banco ou arquivo local
+- tempo de expiração das mensagens públicas de confirmação/seleção
+- cargo marcado acima da embed principal
+- cargo permitido para compartilhar jogos
+- cargo mencionado em mensagens compartilhadas
 
 ---
 
-## ⬇️ Exemplo Recomendado
+## 🚀 Pré-requisitos
 
-### Usando `curl`
+| Dependência | Necessária |
+|---|---|
+| Python 3.11+ | Sim |
+| `pip` | Sim |
+| Token de bot do Discord | Sim |
+| Dataset local atualizado | Sim |
 
-```bash
-curl -L \
-  "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json" \
-  -o online_fix_games.json
-```
-
-### Usando `wget`
-
-```bash
-wget -O online_fix_games.json \
-  "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json"
-```
-
----
-
-## 💻 Exemplo De Consumo Local
-
-### Python
-
-```python
-import json
-
-with open("online_fix_games.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
-
-print(data["total"])
-```
-
-### Node.js
-
-```js
-import fs from "fs";
-
-const raw = fs.readFileSync("online_fix_games.json", "utf-8");
-const data = JSON.parse(raw);
-
-console.log(data.total);
-```
-
----
-
-## 🚫 O Que Evitar
+Dependências atuais:
 
 ```txt
-❌ Fazer download do JSON a cada request da sua API
-❌ Polling agressivo no GitHub Raw
-❌ Consumir sem cache
-❌ Rebaixar milhares de vezes por minuto
+discord.py>=2.5.0,<3.0.0
 ```
 
 ---
 
-## ✅ Boas Práticas
+## 📦 Instalação
 
-```txt
-✅ Cache local
-✅ Atualização agendada
-✅ Banco de dados local
-✅ CDN própria
-✅ Sync periódico
-```
-
-## 🧠 Saídas Principais
-
-| Arquivo | Finalidade |
-|---|---|
-| `online_fix_games.json` | Dataset principal indexado |
-| `stats.json` | Estatísticas leves para badges, dashboards e automações |
-| `steam_applist_full.json` | Catálogo local da Steam usado para matching offline |
-| `low_confidence_matches.json` | Log circular dos casos rejeitados por baixa confiança para revisão e re-treino |
-| `torrents/batch_*/*.torrent` | Arquivos torrent salvos e agrupados por página |
-
-## 🗂 Estrutura Do Dataset
-
-### `online_fix_games.json`
-
-Estrutura de topo:
-
-```json
-{
-  "total": 1679,
-  "downloads": []
-}
-```
-
-Cada item de `downloads` contém os dados raspados do jogo, os metadados do torrent e, quando houver match confiável, os metadados da Steam.
-
-### Campos de update vindos da página
-
-O scraper lê o bloco de atualização presente na seção `edit` da página do Online-Fix, por exemplo:
-
-```txt
-Обновлено: Вчера, 13:24. Причина: Игра обновлена до версии 1.11.8838be4.
-```
-
-Esses dados são distribuídos nos campos abaixo:
-
-- `update_info`: texto bruto de atualização/mudança extraído da página
-- `update_date`: data normalizada e estruturada quando o scraper consegue interpretar o valor
-- `formatted_update_date`: versão legível e normalizada da data de update
-- `last_update`: valor de `<time datetime="...">` quando esse campo existe no HTML
-
-### Campos de cada entrada
-
-| Campo | Descrição |
-|---|---|
-| `title` | Título limpo do jogo |
-| `url` | URL da página no Online-Fix |
-| `page` | Número da página de origem |
-| `last_update` | Valor do `<time datetime="...">` extraído do HTML |
-| `release_date` | Data de lançamento capturada no preview da página |
-| `update_info` | Texto bruto do bloco `edit` com a informação da mudança |
-| `update_date` | Data estruturada derivada do bloco de update |
-| `formatted_update_date` | Data de update normalizada em formato amigável |
-| `unique_hash` | Info-hash / BTIH do torrent |
-| `fileSize` | Tamanho total do torrent |
-| `magnet` | Magnet link com trackers |
-| `torrent_file` | URL raw do GitHub apontando para o `.torrent` salvo |
-| `created_at` | Data de criação do torrent |
-| `webdav_updated_at` | Valor `last-modified` do WebDAV quando disponível |
-| `files` | Lista de arquivos dentro do torrent com nomes e tamanhos |
-| `comment` | Comentário embutido no torrent |
-| `scraped_at` | Timestamp local em que a entrada foi processada |
-| `steam` | Objeto com metadados da Steam ou payload `not_found` com motivo |
-
-<details>
-<summary><strong>Exemplo de entrada</strong></summary>
-
-```json
-{
-  "title": "10 Miles to Safety",
-  "page": 72,
-  "url": "https://online-fix.me/games/survival/123-example.html",
-  "last_update": "2026-04-23T13:24:00+03:00",
-  "release_date": "19.10.2020",
-  "update_info": "Обновлено: Вчера, 13:24. Причина: Игра обновлена до версии 1.11.8838be4.",
-  "update_date": "2026-04-23T13:24:00+03:00",
-  "formatted_update_date": "2026-04-23 13:24:00",
-  "unique_hash": "0123456789abcdef0123456789abcdef01234567",
-  "fileSize": "2.34 GB",
-  "magnet": "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567",
-  "torrent_file": "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/games/torrents/batch_72/10.Miles.to.Safety.v1.0-OFME.torrent",
-  "created_at": "2026-04-23 13:27:15",
-  "webdav_updated_at": "Thu, 23 Apr 2026 10:27:15 GMT",
-  "files": [
-    {
-      "name": "10 Miles to Safety/10 Miles to Safety.exe",
-      "size": "1.85 GB"
-    }
-  ],
-  "comment": "Example torrent comment",
-  "scraped_at": "2026-04-23 18:55:10",
-  "steam": {
-    "steam_appid": 1015140,
-    "match_score": 92,
-    "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1015140/header.jpg",
-    "short_description": "O Apocalipse chegou e seu objetivo é simples...",
-    "short_description_native": "The apocalypse is here and your goal is simple...",
-    "price_brl": "R$ 20,69",
-    "is_free": false,
-    "pc_requirements": {
-      "minimum": "OS: Windows 7...",
-      "recommended": null
-    },
-    "controller_support": "full"
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><strong>Exemplo do objeto Steam</strong></summary>
-
-Quando existe um match confiável com a Steam, o campo `steam` fica assim:
-
-```json
-{
-  "steam_appid": 1015140,
-  "match_score": 92,
-  "match_via": "canon",
-  "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1015140/header.jpg",
-  "short_description": "O Apocalipse chegou e seu objetivo é simples...",
-  "short_description_native": "The apocalypse is here and your goal is simple...",
-  "price_brl": "R$ 20,69",
-  "is_free": false,
-  "pc_requirements": {
-    "minimum": "OS: Windows 7...",
-    "recommended": null
-  },
-  "controller_support": "full"
-}
-```
-
-Se o scraper não conseguir validar um match seguro, ele grava um fallback leve assim:
-
-```json
-{
-  "not_found": true,
-  "reason": "low_confidence",
-  "search_url": "https://store.steampowered.com/api/storesearch/?term=example&l=portuguese&cc=BR"
-}
-```
-
-</details>
-
-### `stats.json`
-
-Este arquivo foi pensado para ser amigável com badges.
-
-<details>
-<summary><strong>Exemplo de estrutura</strong></summary>
-
-```json
-{
-  "repo": "zKauaFerreira/The-Gaming-Rumble",
-  "branch": "games",
-  "raw_base_url": "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/games/torrents/",
-  "total_games": 1717,
-  "online_fix_total": 1717,
-  "steam_with_metadata": 1607,
-  "steam_without_metadata": 110,
-  "match_rate": 93.59,
-  "success_rate": 93.59,
-  "online_fix_pages_total": 90,
-  "pages_scraped_target": 90,
-  "pages_present_in_json": 89,
-  "last_page_in_json": 89,
-  "new_games_found_this_run": 138,
-  "new_games_added_to_json_this_run": 4,
-  "latest_run_new_game_names": [
-    "RoadCraft",
-    "SnowRunner",
-    "Bus Bound",
-    "Expeditions A MudRunner Game"
-  ],
-  "updated_games_this_run": 0,
-  "latest_run_updated_game_names": [],
-  "processed_games_this_run": 4,
-  "torrent_files_total": 1717,
-  "json_entries_with_torrent": 1717,
-  "last_scrape_at": "2026-05-06 16:30:21",
-  "last_scrape_at_display": "06/05/2026",
-  "last_game_update": "2026-05-06T19:15:28+03:00",
-  "generated_at": "2026-05-06 16:32:03",
-  "generated_at_display": "06/05/2026"
-}
-```
-
-</details>
-
-##  Como A Pipeline Funciona
-
-```mermaid
-flowchart LR
-  %% Fonte
-  OF["🌐 online-fix.me"] -->|login + AJAX pages| B["scrapper.py\n(6 workers)"]
-
-  %% Steam Catalog (pré-requisito)
-  SA["steam_applist.py"] -->|200k+ apps| APPLIST[("steam_applist_full.json")]
-  APPLIST -->|índice local| B
-
-  %% Processamento
-  B --> C["Extrai dados\n(título, datas, links)"]
-  B --> D["Baixa .torrent\n(WebDAV + fallbacks)"]
-  D --> E["Metadados torrent\n(bencode → hash, magnet, files)"]
-  B --> F["Match Steam\n(fuzzy + ML Guard)"]
-  F -->|appid confirmado| G["Steam appdetails\n+ Translate PT-BR"]
-
-  %% Outputs
-  C --> H[("online_fix_games.json\n1700+ jogos")]
-  E --> H
-  G --> H
-  D --> I[("torrents/batch_1..N/")]
-  H --> J[("stats.json")]
-  J -->|Shields.io dynamic/json| K["🏷️ Badges do README"]
-
-  %% Git
-  H & I & J -->|commit & push| GIT["🔄 branch games"]
-```
-
-##  Notas Sobre O Fuzzy Matching
-
-O matcher da Steam é propositalmente conservador.
-
-- Normaliza pontuação, acentos e números romanos comuns
-- Compara tokens relevantes em vez de confiar em palavras genéricas
-- Trata números e anos separadamente para reduzir falso positivo
-- Rejeita candidatos de baixa confiança em vez de forçar um match errado
-
-Isso significa que um jogo pode aparecer com `steam.not_found = true` quando a confiança é baixa, e isso costuma ser melhor do que anexar metadados do jogo errado.
-
-## 🤖 Match Guard Leve
-
-Além do fuzzy principal, o projeto agora usa uma camada leve de classificação para repescagem e validação final dos matches da Steam.
-
-### Componentes
-
-| Item | Arquivo | Função |
-|---|---|---|
-| Modelo leve | `tools/match_guard_model.json` | Pesos do classificador serializados em JSON |
-| Treino offline | `tools/train_match_guard.py` | Gera features, monta dataset e salva o modelo |
-| Benchmark rápido | `tools/benchmark_match_guard.py` | Mede modelo puro, híbrido e lookup real |
-| Suíte por catálogo | `tools/catalog_match_guard_suite.py` | Gera e testa casos difíceis diretamente do `steam_applist_full.json` |
-| Aliases curados | `tools/match_guard_aliases.json` | Corrige casos históricos, renomeados ou subtitulados |
-| Log contínuo | `low_confidence_matches.json` | Guarda rejeições de baixa confiança para revisão e re-treino |
-
-### O que essa camada resolve
-
-**Recupera matches bons com pequenas diferenças de nome**
-
-| Query | Match correto |
-|---|---|
-| `Godfall` | `Godfall Ultimate Edition` |
-| `Demeo PC Edition` | `Demeo` |
-| `Hasbros BATTLESHIP` | `Hasbro's BATTLESHIP` |
-| `Ghost of Tsushima DIRECTORS CUT` | `Ghost of Tsushima DIRECTOR'S CUT` |
-
-**Bloqueia falsos positivos perigosos**
-
-- Penaliza candidatos parecidos de franquia errada
-- Evita matches “criativos demais” em títulos curtos ou muito genéricos
-- Mantém aliases explícitos separados, sem enfraquecer a regra geral
-
-**Protege franquias numeradas**
-
-- `Forza Horizon 3` nunca deve casar com `Forza Horizon 4`
-- `Forza Horizon 4` nunca deve casar com `Forza Horizon 5`
-- `Resident Evil 2` nunca deve casar com `Resident Evil 3`
-- `Halo Wars 2` nunca deve casar com `Halo Wars 3`
-
-### Features usadas pelo modelinho
-
-| Grupo | Features |
-|---|---|
-| Similaridade fuzzy | `token_set_ratio`, `token_sort_ratio`, `ratio`, `partial_ratio` |
-| Igualdade textual | igualdade normalizada, igualdade compacta e contenção de string |
-| Igualdade canônica | igualdade com e sem descritores, inclusive stripping de sufixos como `Ultimate Edition` e `PC Edition` |
-| Similaridade por tokens | overlap e Jaccard de tokens gerais, relevantes e canônicos |
-| Regras de sequência | conflito explícito de franquia/número, comparação de números romanos/arábicos e anos |
-| Sinais estruturais | diferença de comprimento, contagem de tokens extras e interseção de tokens fortes |
-
-### Estratégia de treino
-
-- positivos reais extraídos do dataset atual
-- positivos sintéticos gerados a partir do catálogo da Steam
-- variações artificiais de sufixos e edições:
-  - `Ultimate Edition`
-  - `Definitive Edition`
-  - `PC Edition`
-  - `Digital Edition`
-- hard negative mining com candidatos textualmente parecidos
-- hard negatives de franquia, principalmente quando a série é igual mas o número muda
-- casos automáticos gerados a partir do próprio catálogo da Steam, cobrindo:
-  - apóstrofo
-  - `&`
-  - `:`
-  - números romanos
-  - anos
-  - edições
-  - nomes com parênteses
-  - non-ASCII
-  - títulos muito longos
-
-### Como treinar e validar
+### Clone o projeto
 
 ```bash
-python tools/train_match_guard.py
-python tools/benchmark_match_guard.py
-python tools/catalog_match_guard_suite.py
+git clone <url-do-repositorio>
 ```
 
-O benchmark separa três níveis:
+### Entre na pasta
 
-- `PURE_MODEL_ACCURACY`
-- `HYBRID_MODEL_ACCURACY`
-- `LOOKUP_ACCURACY`
-
-### Fluxo de decisão
-
-```mermaid
-flowchart LR
-  A["Título raspado"] --> B["Busca top-N no catálogo Steam"]
-  B --> C["Features + Match Guard"]
-  C --> D["Regras de segurança"]
-  D --> E["Aceita match"]
-  D --> F["low_confidence / reject"]
+```bash
+cd "Rumble BOT"
 ```
 
-As regras de segurança continuam mandando no resultado final:
-
-- conflito de franquia e número rejeita o candidato
-- match canônico forte pode validar mesmo quando o fuzzy tem ruído
-- casos históricos podem ser resolvidos por alias explícito
-- rejeições importantes vão para `low_confidence_matches.json`
-
-### Métricas locais atuais
-
-| Métrica | Resultado |
-|---|---|
-| Holdout do treino | `99%+` |
-| Benchmark do modelo puro | `24/24` |
-| Benchmark do pipeline híbrido | `24/24` |
-| Benchmark de lookup real | `24/24` |
-| Bateria funcional ampliada | `50/50` |
-| Suíte automática do catálogo Steam | `223/237` positivos e `160/160` negativos |
-
-> [!NOTE]
-> O alvo real do projeto não é “IA pura, e sim **matching confiável em runner**. O resultado forte vem da combinação entre fuzzy, classificador leve, aliases curados e guard rails de franquia/número.
-
-### O que a suíte do catálogo mede
-
-A suíte baseada no `steam_applist_full.json` gera casos sintéticos a partir de jogos reais da Steam para forçar o matcher em cenários difíceis:
-
-- remover apóstrofos
-- trocar `&` por `and`
-- colapsar pontuação
-- remover sufixos de edição
-- testar nomes com romanos, anos, non-ASCII e títulos longos
-- validar colisões entre jogos da mesma franquia com número diferente
-
-Os números mais importantes dessa suíte são:
-
-| Grupo | Resultado |
-|---|---|
-| Positivos por catálogo | `223/237` |
-| Negativos por conflito de franquia/número | `160/160` |
-
-Os positivos que ainda falham não costumam ser “erro bruto do modelo. Em geral são casos em que a transformação deixa o nome ambíguo demais, por exemplo:
-
-- título delistado ou legado que só existe na Steam com um subtítulo/classificador específico
-- nome base genérico demais depois de remover `(...)`
-- casos em que cortar tudo antes/depois de `:` deixa o jogo com poucas palavras úteis
-
-Isso é útil porque mostra exatamente onde vale investir em:
-
-- alias explícito
-- regras específicas de legado/collection/classic
-- revisão manual via `low_confidence_matches.json`
-
-## 📋 Novo Formato De Log
-
-O processamento da fase 2 agora prioriza uma linha compacta por jogo, reduzindo o ruído de mensagens intermediárias.
-
-Exemplo:
-
-```text
-✅ [0002/0138] | RoadCraft                 | T:OK S:OK G:canon R:NEW | 4257ms | P:001 | 🌐 | M: 260MB | OK                 | 16:30:20
-✅ [0007/0138] | Some Existing Game        | T:OK S:OK G:model R:UPD | 3200ms | P:004 | 🌐 | M: 260MB | OK                 | 16:30:20
-❌ [0009/0138] | Old Existing Game         | T:!! S:!! G:--    R:OLD | 1600ms | P:004 | 🌐 | M: 260MB | 401                | 16:30:21
-```
-
-### Campos da linha
-
-| Campo | Significado |
-|---|---|
-| status final | `✅`, `⚠️` ou `❌` |
-| `[atual/total]` | progresso do processamento |
-| nome | título truncado para leitura rápida |
-| `T:OK / T:!!` | status do torrent |
-| `S:OK / S:!!` | status do match Steam |
-| `G:canon / alias / model / fuzzy / --` | origem do match Steam |
-| `R:NEW / UPD / OLD` | se o item é novo, update ou apenas já conhecido |
-| `ms` | latência total por jogo |
-| `P:NNN` | página de origem no Online-Fix |
-| `🌐 / 🏠` | proxy ativo ou conexão local |
-| `M:NNNMB` | memória do processo quando disponível |
-| motivo final | resumo do resultado ou da falha |
-| horário | timestamp local da linha em `America/Sao_Paulo` |
-
-### Motivos finais mais comuns
-
-| Motivo | Significado |
-|---|---|
-| `OK` | torrent e Steam resolvidos com sucesso |
-| `low_confidence` | candidato Steam rejeitado por confiança insuficiente |
-| `keyword_missing` | palavra-chave obrigatória da franquia não apareceu no candidato |
-| `NO_TORRENT_LINK` | página existe, mas o link de torrent não foi encontrado |
-| `401` / `404` / `429` | código HTTP relevante da tentativa |
-| `Timeout`, `ConnectionError`, etc. | exceção capturada durante o processo |
-
-### Objetivo do formato novo
-
-- reduzir spam de logs intermediários
-- concentrar tudo que importa em uma linha por jogo
-- facilitar debug visual em terminal, runner e GitHub Actions
-- deixar latência, rede, origem do match e status de `new/update` visíveis sem precisar abrir stacktrace
-
-## ⚙ Configuração Local
-
-### Requisitos
+### Instale as dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Dependências atuais:
+### Configure o ambiente
+
+Copie `.env.example` para `.env` e preencha os campos necessários:
+
+```env
+DISCORD_TOKEN=
+DISCORD_GUILD_ID=
+LOG_LEVEL=INFO
+DATA_FILE=online_fix_games.json
+CONFIG_FILE=config.json
+DEV_AUTORELOAD=true
+DEV_RELOAD_INTERVAL=1.0
+SYNC_GLOBAL_COMMANDS=false
+JSON_GAMES=https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json
+JSON_STATS=https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/stats.json
+```
+
+---
+
+## 💻 Executando O Projeto
+
+### Desenvolvimento
+
+```bash
+python main.py
+```
+
+O supervisor de desenvolvimento:
+
+- reinicia o bot quando arquivos Python mudam
+- ignora `online_fix_games.json` e `stats.json` para não reiniciar o processo por sync de dataset
+- limpa o console quando existir terminal interativo
+- mostra quais arquivos dispararam o restart
+
+### Produção
+
+Para produção em Ubuntu/Linux, o recomendado é:
+
+```env
+DEV_AUTORELOAD=false
+```
+
+e então:
+
+```bash
+python main.py
+```
+
+---
+
+## 🔄 Sincronização Do Catálogo
+
+O projeto inclui um script auxiliar para atualizar os datasets e finalizar em seguida, ideal para cron:
+
+```bash
+python sync_catalog.py
+```
+
+O script:
+
+- lê `JSON_GAMES` e `JSON_STATS` do `.env`
+- baixa os dois arquivos
+- substitui os arquivos locais
+- encerra completamente
+
+### Exemplo de cron no Ubuntu
+
+```bash
+*/30 * * * * cd /caminho/do/bot && /usr/bin/python3 sync_catalog.py
+```
+
+Quando `online_fix_games.json` ou `stats.json` mudam:
+
+- o bot recarrega o cache
+- atualiza automaticamente a mensagem principal do canal configurado
+
+---
+
+## 🧩 Mensagens Rotativas De Atividade
+
+O bot suporta mensagens de presença configuráveis por `/config messages`.
+
+Formato:
 
 ```txt
-requests
-beautifulsoup4
-cloudscraper
-bencode.py
-rapidfuzz
-python-dotenv
-psutil
-tzdata
+🎮 {{total_games}} jogos disponíveis [20s]
+🆕 Último jogo: {{latest_game}} [11s]
+⚡ Latência: {{latency_ms}}ms [10s]
 ```
 
-### Variáveis de ambiente
+### Placeholders disponíveis
 
-Crie um `.env` ou exporte estas variáveis:
+| Placeholder | Descrição |
+|---|---|
+| `{{total_games}}` | Total de jogos no dataset |
+| `{{new_games_count}}` | Quantidade de jogos novos na última execução |
+| `{{latest_game}}` | Último jogo listado em `latest_run_new_game_names` |
+| `{{latest_update}}` | Última atualização formatada do dataset |
+| `{{servers}}` | Número de servidores conectados |
+| `{{users}}` | Soma de membros dos servidores conectados |
+| `{{latency_ms}}` | Latência atual do bot em ms |
 
-```bash
-ONLINEFIX_USER=seu_usuario
-ONLINEFIX_PASS=sua_senha
-PROXY_LIST_URL=https://example.com/proxies.txt
-GITHUB_REPOSITORY=zKauaFerreira/The-Gaming-Rumble
-GITHUB_BRANCH=games
-```
+Regras:
 
-`PROXY_LIST_URL` aceita:
+- se houver apenas uma mensagem, ela fica fixa
+- se houver duas ou mais, todas precisam ter duração
+- se enviar vazio, o bot limpa a configuração
 
-- Uma única URL
-- Várias URLs separadas por `;`
-- Várias URLs separadas por quebra de linha
+---
 
-Exemplo com várias listas de proxy:
-
-```bash
-PROXY_LIST_URL=https://example.com/list-a.txt;https://example.com/list-b.txt;https://example.com/list-c.txt
-```
-
-Espera-se que cada lista de proxy tenha um proxy por linha no formato:
+## 🗂️ Estrutura Do Projeto
 
 ```txt
-IP:PORT:USER:PASS
-```
-
-### Catálogo da Steam
-
-Para manter o matching rápido e majoritariamente offline, baixe o catálogo de apps da Steam:
-
-```bash
-curl "https://api.steampowered.com/ISteamApps/GetAppList/v2/" -o steam_applist_full.json
-```
-
-## 🚀 Uso
-
-### Rodar o scraper
-
-```bash
-python scrapper.py --pages 10 --workers 8
-```
-
-### Argumentos CLI disponíveis
-
-| Argumento | Descrição |
-|---|---|
-| `--pages` | Última página a ser processada |
-| `--start-page` | Primeira página a ser processada |
-| `--workers` | Concorrência para tarefas de torrent + Steam |
-| `--baseurl` | Sobrescreve a URL base do Online-Fix |
-| `--user` | Sobrescreve o usuário |
-| `--password` | Sobrescreve a senha |
-| `--cookie` | Cookie manual `online_fix_auth` |
-
-## 🤖 GitHub Actions
-
-Este repositório inclui três workflows:
-
-| Workflow | Finalidade |
-|---|---|
-| `scrape.yml` | Executa o scraper e atualiza JSON + torrents + stats |
-| `steam-applist.yml` | Atualiza o catálogo da Steam |
-| `clean.yml` | Remove dados gerados da branch |
-
-### Secrets necessários
-
-- `ONLINEFIX_USER`
-- `ONLINEFIX_PASS`
-- `PROXY_LIST_URL` opcional, aceita uma ou várias URLs de lista de proxy
-- `STEAM_API_KEY` apenas para `steam_applist.py`
-
-## 🏷️ Badges Dinâmicas Com `stats.json`
-
-Você pode criar uma badge para cada campo usando o Shields.io.
-
-Exemplo:
-
-```md
-![Total Games](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.total_games&label=Total%20Games&color=2ea44f&style=for-the-badge)
-```
-
-O parâmetro `url=` deve ser URL-encoded ao montar badges dinâmicas com JSON no Shields.
-
-Consultas úteis:
-
-| Rótulo | Query |
-|---|---|
-| Total Games | `%24.total_games` |
-| Steam Matched | `%24.steam_with_metadata` |
-| Steam Missing | `%24.steam_without_metadata` |
-| Success Rate | `%24.success_rate` |
-| Online-Fix Pages | `%24.online_fix_pages_total` |
-| Torrent Files | `%24.torrent_files_total` |
-| Last Update | `%24.last_scrape_at_display` |
-| New Added This Run | `%24.new_games_added_to_json_this_run` |
-| Updated This Run | `%24.updated_games_this_run` |
-| JSON Torrents | `%24.json_entries_with_torrent` |
-| Last Page | `%24.last_page_in_json` |
-
-> [!NOTE]
-> O Shields.io usa cache, então as badges nem sempre atualizam imediatamente.
-
-## 📁 Estrutura Do Repositório
-
-```txt
-.
-├── .github/
-│   └── workflows/
-├── torrents/
-│   └── batch_*/
+Rumble BOT/
+├── app/
+│   ├── bot.py
+│   ├── config.py
+│   └── logging_config.py
+├── cogs/
+│   ├── admin.py
+│   ├── bot_config.py
+│   ├── config.py
+│   ├── emoji.py
+│   ├── games.py
+│   ├── listener.py
+│   └── system.py
+├── domain/
+├── repositories/
+├── services/
+├── utils/
+├── tests/
+├── config.json
 ├── online_fix_games.json
 ├── stats.json
-├── scrapper.py
-├── steam_applist.py
-├── steam_applist_full.json
-├── requirements.txt
+├── requirements_translations.json
+├── sync_catalog.py
+├── main.py
 └── README.md
 ```
 
-## 🛠 Notas Operacionais
+### Visão rápida das pastas
 
-- O site alvo retorna conteúdo não UTF-8 em algumas respostas
-- O bypass do Cloudflare usa `cloudscraper` quando disponível
-- Os metadados da Steam só são buscados após o match no catálogo local
-- Rotação de proxies ajuda a reduzir rate limit nas chamadas da Steam
-- Os links raw de torrent são normalizados para este repositório e para a branch `games`
+| Caminho | Finalidade |
+|---|---|
+| `app/` | Bootstrap, config, logging e ciclo principal do bot |
+| `cogs/` | Comandos, listeners e painéis interativos |
+| `repositories/` | Leitura e persistência de arquivos JSON |
+| `services/` | Regras de negócio, busca e permissões |
+| `utils/` | Embeds, views, encoder do GR-Link e helpers |
+| `domain/` | Modelos tipados do catálogo |
+| `tests/` | Testes auxiliares do projeto |
 
-## ⚠ Importante
+---
 
-> [!WARNING]
-> Não faça commit de credenciais reais, cookies ou listas privadas de proxy neste repositório.
+## 🛠️ Notas Operacionais
 
-> [!TIP]
-> Se o HTML do site mudar, comece revisando `_extract_games`, `find_torrent_robust` e os helpers de Steam matching dentro de `scrapper.py`.
+- O bot foi preparado para rodar tanto em Windows quanto em Linux
+- O dataset principal é local e pode ser atualizado por cron sem reiniciar o bot
+- O painel principal do canal é autoatualizável
+- O canal configurado pode ser limpo automaticamente no startup
+- O sistema de permissões separa administração, busca e compartilhamento
+- As embeds finais suportam GR-Link, requisitos, compartilhamento e catálogo paginado
+- O projeto foi desenhado para o ecossistema Gaming Rumble, não como bot genérico de torrent
 
-## 📜 Licença
+---
 
-Este repositório é disponibilizado apenas para fins educacionais e de pesquisa.
+## 🤝 Contribuindo
 
-Veja a licença completa e o aviso legal em [LICENSE](C:/Users/Administrator/Pictures/Gaming-Rumble/LICENSE).
+Fluxo recomendado:
 
-### Resumo do aviso
+```txt
+Fork
+ → Feature Branch
+ → Commit
+ → Pull Request
+```
 
-> [!WARNING]
-> Este software é fornecido **"AS IS"**, sem garantia de qualquer tipo, expressa ou implícita, incluindo, mas não se limitando, a comercialização, adequação a um propósito específico e não violação.
->
-> Os autores não se responsabilizam por mau uso, violações de direitos autorais ou quaisquer danos diretos, indiretos, incidentais ou consequentes decorrentes do uso deste projeto.
->
-> Ao usar este repositório, você assume total responsabilidade por qualquer conteúdo que acessar, processar ou instalar.
+---
+
+## 📄 Licença
+
+Este projeto é disponibilizado apenas para fins educacionais e de pesquisa.
+
+Veja a licença completa e o aviso legal em `LICENSE`.

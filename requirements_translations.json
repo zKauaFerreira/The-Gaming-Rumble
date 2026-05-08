@@ -1,0 +1,31 @@
+{
+  "phrase_replacements": {
+    "64-bit Windows": "Windows 64 bits",
+    "64-bit": "64 bits",
+    "64bit": "64 bits",
+    "Win 10": "Windows 10",
+    "or equivalent": "ou equivalente",
+    "equivalent": "equivalente",
+    "or better": "ou superior",
+    "or higher": "ou superior",
+    "or newer": "ou mais recente",
+    "with at least": "com pelo menos",
+    "at least": "pelo menos",
+    "with Shader Model": "com Shader Model",
+    "with": "com",
+    "and": "e",
+    "of": "de",
+    "running at": "rodando a",
+    "graphic card": "placa de vídeo",
+    "dedicated graphic card": "placa de vídeo dedicada",
+    "dedicated VRAM": "VRAM dedicada",
+    "dedicated": "dedicada",
+    "class GPU": "GPU de classe",
+    "support": "suporte",
+    "better": "melhor",
+    "is recommended": "é recomendado",
+    "are recommended": "são recomendados",
+    "is recommended.": "é recomendado.",
+    "are recommended.": "são recomendados."
+  }
+}

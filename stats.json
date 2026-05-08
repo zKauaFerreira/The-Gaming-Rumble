@@ -12,20 +12,17 @@
   "pages_scraped_target": 90,
   "pages_present_in_json": 89,
   "last_page_in_json": 89,
-  "new_games_found_this_run": 136,
-  "new_games_added_to_json_this_run": 2,
-  "latest_run_new_game_names": [
-    "Over The Top WWI",
-    "Rosalie"
-  ],
+  "new_games_found_this_run": 134,
+  "new_games_added_to_json_this_run": 0,
+  "latest_run_new_game_names": [],
   "updated_games_this_run": 0,
   "latest_run_updated_game_names": [],
-  "processed_games_this_run": 2,
+  "processed_games_this_run": 0,
   "torrent_files_total": 1719,
   "json_entries_with_torrent": 1719,
   "last_scrape_at": "2026-05-07 16:31:17",
   "last_scrape_at_display": "07/05/2026",
   "last_game_update": "2026-05-07T14:48:48+03:00",
-  "generated_at": "2026-05-07 16:32:55",
-  "generated_at_display": "07/05/2026"
+  "generated_at": "2026-05-08 16:12:22",
+  "generated_at_display": "08/05/2026"
 }
