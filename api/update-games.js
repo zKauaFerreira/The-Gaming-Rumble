@@ -17,6 +17,7 @@ export default async function handler(req, res) {
 
     const blob = await put('games.json', JSON.stringify(gamesData), {
       access: 'public',
+      addRandomSuffix: false,
     });
 
     console.log('Games data updated successfully in Vercel Blob!');
