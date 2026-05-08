@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/update-games",
+      "schedule": "0 21 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
