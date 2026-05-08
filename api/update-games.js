@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { put } from '@vercel/blob';
 
 export default async function handler(req, res) {
   const authHeader = req.headers.authorization;
@@ -15,10 +15,16 @@ export default async function handler(req, res) {
     }
     const gamesData = await response.json();
 
-    await kv.set('games', gamesData);
+    const blob = await put('games.json', JSON.stringify(gamesData), {
+      access: 'public',
+    });
 
-    console.log('Games data updated successfully in Vercel KV!');
-    res.status(200).json({ success: true, message: 'Games data updated in Vercel KV.' });
+    console.log('Games data updated successfully in Vercel Blob!');
+    res.status(200).json({
+      success: true,
+      message: 'Games data updated in Vercel Blob.',
+      url: blob.url
+    });
   } catch (error) {
     console.error('Error updating games data:', error);
     res.status(500).json({ success: false, message: error.message });
