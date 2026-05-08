@@ -298,9 +298,3 @@ O workflow da branch `main`:
 Este repositório é disponibilizado apenas para fins educacionais e de pesquisa.
 
 Veja a licença completa e o aviso legal em `LICENSE`.
-
----
-
-<p align="center">
-  <strong>Gaming Rumble Engine © 2026 — Todos os direitos reservados.</strong>
-</p>
