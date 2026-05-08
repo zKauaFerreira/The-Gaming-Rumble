@@ -13,6 +13,41 @@
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.total_games&label=%20&color=2ea44f&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_with_metadata&label=%20&color=1f6feb&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_without_metadata&label=%20&color=d73a49&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.success_rate&suffix=%25&label=%20&color=8250df&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.online_fix_pages_total&label=%20&color=fb8500&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.torrent_files_total&label=%20&color=0a9396&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.last_scrape_at_display&label=%20&color=6f42c1&style=flat-square) |
 
+---
+
+## 📋 Índice
+
+<details open>
+<summary><b>Clique para expandir/recolher</b></summary>
+
+- 📌 [O Que Este Repositório Faz](#-o-que-este-repositório-faz)
+- 🌍 [Public Dataset Notice](#-public-dataset-notice)
+- 📦 [Datasets Públicos](#-datasets-públicos)
+- 🔄 [Frequência De Atualização](#-frequência-de-atualização)
+- ⚠️ [Uso Recomendado](#️-uso-recomendado)
+- ⬇️ [Exemplo Recomendado](#️-exemplo-recomendado)
+- 💻 [Exemplo De Consumo Local](#-exemplo-de-consumo-local)
+- 🚫 [O Que Evitar](#-o-que-evitar)
+- ✅ [Boas Práticas](#-boas-práticas)
+- 🧠 [Saídas Principais](#-saídas-principais)
+- 🗂 [Estrutura Do Dataset](#-estrutura-do-dataset)
+- ⚙️ [Como A Pipeline Funciona](#️-como-a-pipeline-funciona)
+- 🧠 [Notas Sobre O Fuzzy Matching](#-notas-sobre-o-fuzzy-matching)
+- 🤖 [Match Guard Leve](#-match-guard-leve)
+- 📋 [Novo Formato De Log](#-novo-formato-de-log)
+- ⚙ [Configuração Local](#-configuração-local)
+- 🚀 [Uso](#-uso)
+- 🤖 [GitHub Actions](#-github-actions)
+- 🏷️ [Badges Dinâmicas Com stats.json](#️-badges-dinâmicas-com-statsjson)
+- 📁 [Estrutura Do Repositório](#-estrutura-do-repositório)
+- 🛠 [Notas Operacionais](#-notas-operacionais)
+- ⚠ [Importante](#-importante)
+- 📜 [Licença](#-licença)
+
+</details>
+
+---
+
 ## 📌 O Que Este Repositório Faz
 
 Este projeto automatiza toda a pipeline de coleta dos jogos do Online-Fix:
@@ -94,7 +129,7 @@ O recomendado é:
 curl -L \
   "https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/games/online_fix_games.json" \
   -o online_fix_games.json
-```
+````
 
 ### Usando `wget`
 
@@ -154,13 +189,13 @@ console.log(data.total);
 
 ## 🧠 Saídas Principais
 
-| Arquivo | Finalidade |
-|---|---|
-| `online_fix_games.json` | Dataset principal indexado |
-| `stats.json` | Estatísticas leves para badges, dashboards e automações |
-| `steam_applist_full.json` | Catálogo local da Steam usado para matching offline |
+| Arquivo                       | Finalidade                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `online_fix_games.json`       | Dataset principal indexado                                                     |
+| `stats.json`                  | Estatísticas leves para badges, dashboards e automações                        |
+| `steam_applist_full.json`     | Catálogo local da Steam usado para matching offline                            |
 | `low_confidence_matches.json` | Log circular dos casos rejeitados por baixa confiança para revisão e re-treino |
-| `torrents/batch_*/*.torrent` | Arquivos torrent salvos e agrupados por página |
+| `torrents/batch_*/*.torrent`  | Arquivos torrent salvos e agrupados por página                                 |
 
 ## 🗂 Estrutura Do Dataset
 
@@ -187,33 +222,33 @@ O scraper lê o bloco de atualização presente na seção `edit` da página do 
 
 Esses dados são distribuídos nos campos abaixo:
 
-- `update_info`: texto bruto de atualização/mudança extraído da página
-- `update_date`: data normalizada e estruturada quando o scraper consegue interpretar o valor
-- `formatted_update_date`: versão legível e normalizada da data de update
-- `last_update`: valor de `<time datetime="...">` quando esse campo existe no HTML
+* `update_info`: texto bruto de atualização/mudança extraído da página
+* `update_date`: data normalizada e estruturada quando o scraper consegue interpretar o valor
+* `formatted_update_date`: versão legível e normalizada da data de update
+* `last_update`: valor de `<time datetime="...">` quando esse campo existe no HTML
 
 ### Campos de cada entrada
 
-| Campo | Descrição |
-|---|---|
-| `title` | Título limpo do jogo |
-| `url` | URL da página no Online-Fix |
-| `page` | Número da página de origem |
-| `last_update` | Valor do `<time datetime="...">` extraído do HTML |
-| `release_date` | Data de lançamento capturada no preview da página |
-| `update_info` | Texto bruto do bloco `edit` com a informação da mudança |
-| `update_date` | Data estruturada derivada do bloco de update |
-| `formatted_update_date` | Data de update normalizada em formato amigável |
-| `unique_hash` | Info-hash / BTIH do torrent |
-| `fileSize` | Tamanho total do torrent |
-| `magnet` | Magnet link com trackers |
-| `torrent_file` | URL raw do GitHub apontando para o `.torrent` salvo |
-| `created_at` | Data de criação do torrent |
-| `webdav_updated_at` | Valor `last-modified` do WebDAV quando disponível |
-| `files` | Lista de arquivos dentro do torrent com nomes e tamanhos |
-| `comment` | Comentário embutido no torrent |
-| `scraped_at` | Timestamp local em que a entrada foi processada |
-| `steam` | Objeto com metadados da Steam ou payload `not_found` com motivo |
+| Campo                   | Descrição                                                       |
+| ----------------------- | --------------------------------------------------------------- |
+| `title`                 | Título limpo do jogo                                            |
+| `url`                   | URL da página no Online-Fix                                     |
+| `page`                  | Número da página de origem                                      |
+| `last_update`           | Valor do `<time datetime="...">` extraído do HTML               |
+| `release_date`          | Data de lançamento capturada no preview da página               |
+| `update_info`           | Texto bruto do bloco `edit` com a informação da mudança         |
+| `update_date`           | Data estruturada derivada do bloco de update                    |
+| `formatted_update_date` | Data de update normalizada em formato amigável                  |
+| `unique_hash`           | Info-hash / BTIH do torrent                                     |
+| `fileSize`              | Tamanho total do torrent                                        |
+| `magnet`                | Magnet link com trackers                                        |
+| `torrent_file`          | URL raw do GitHub apontando para o `.torrent` salvo             |
+| `created_at`            | Data de criação do torrent                                      |
+| `webdav_updated_at`     | Valor `last-modified` do WebDAV quando disponível               |
+| `files`                 | Lista de arquivos dentro do torrent com nomes e tamanhos        |
+| `comment`               | Comentário embutido no torrent                                  |
+| `scraped_at`            | Timestamp local em que a entrada foi processada                 |
+| `steam`                 | Objeto com metadados da Steam ou payload `not_found` com motivo |
 
 <details>
 <summary><strong>Exemplo de entrada</strong></summary>
@@ -341,7 +376,7 @@ Este arquivo foi pensado para ser amigável com badges.
 
 </details>
 
-##  Como A Pipeline Funciona
+## Como A Pipeline Funciona
 
 ```mermaid
 flowchart LR
@@ -371,14 +406,14 @@ flowchart LR
   H & I & J -->|commit & push| GIT["🔄 branch games"]
 ```
 
-##  Notas Sobre O Fuzzy Matching
+## Notas Sobre O Fuzzy Matching
 
 O matcher da Steam é propositalmente conservador.
 
-- Normaliza pontuação, acentos e números romanos comuns
-- Compara tokens relevantes em vez de confiar em palavras genéricas
-- Trata números e anos separadamente para reduzir falso positivo
-- Rejeita candidatos de baixa confiança em vez de forçar um match errado
+* Normaliza pontuação, acentos e números romanos comuns
+* Compara tokens relevantes em vez de confiar em palavras genéricas
+* Trata números e anos separadamente para reduzir falso positivo
+* Rejeita candidatos de baixa confiança em vez de forçar um match errado
 
 Isso significa que um jogo pode aparecer com `steam.not_found = true` quando a confiança é baixa, e isso costuma ser melhor do que anexar metadados do jogo errado.
 
@@ -388,71 +423,73 @@ Além do fuzzy principal, o projeto agora usa uma camada leve de classificação
 
 ### Componentes
 
-| Item | Arquivo | Função |
-|---|---|---|
-| Modelo leve | `tools/match_guard_model.json` | Pesos do classificador serializados em JSON |
-| Treino offline | `tools/train_match_guard.py` | Gera features, monta dataset e salva o modelo |
-| Benchmark rápido | `tools/benchmark_match_guard.py` | Mede modelo puro, híbrido e lookup real |
+| Item               | Arquivo                              | Função                                                               |
+| ------------------ | ------------------------------------ | -------------------------------------------------------------------- |
+| Modelo leve        | `tools/match_guard_model.json`       | Pesos do classificador serializados em JSON                          |
+| Treino offline     | `tools/train_match_guard.py`         | Gera features, monta dataset e salva o modelo                        |
+| Benchmark rápido   | `tools/benchmark_match_guard.py`     | Mede modelo puro, híbrido e lookup real                              |
 | Suíte por catálogo | `tools/catalog_match_guard_suite.py` | Gera e testa casos difíceis diretamente do `steam_applist_full.json` |
-| Aliases curados | `tools/match_guard_aliases.json` | Corrige casos históricos, renomeados ou subtitulados |
-| Log contínuo | `low_confidence_matches.json` | Guarda rejeições de baixa confiança para revisão e re-treino |
+| Aliases curados    | `tools/match_guard_aliases.json`     | Corrige casos históricos, renomeados ou subtitulados                 |
+| Log contínuo       | `low_confidence_matches.json`        | Guarda rejeições de baixa confiança para revisão e re-treino         |
 
 ### O que essa camada resolve
 
 **Recupera matches bons com pequenas diferenças de nome**
 
-| Query | Match correto |
-|---|---|
-| `Godfall` | `Godfall Ultimate Edition` |
-| `Demeo PC Edition` | `Demeo` |
-| `Hasbros BATTLESHIP` | `Hasbro's BATTLESHIP` |
+| Query                             | Match correto                      |
+| --------------------------------- | ---------------------------------- |
+| `Godfall`                         | `Godfall Ultimate Edition`         |
+| `Demeo PC Edition`                | `Demeo`                            |
+| `Hasbros BATTLESHIP`              | `Hasbro's BATTLESHIP`              |
 | `Ghost of Tsushima DIRECTORS CUT` | `Ghost of Tsushima DIRECTOR'S CUT` |
 
 **Bloqueia falsos positivos perigosos**
 
-- Penaliza candidatos parecidos de franquia errada
-- Evita matches “criativos demais” em títulos curtos ou muito genéricos
-- Mantém aliases explícitos separados, sem enfraquecer a regra geral
+* Penaliza candidatos parecidos de franquia errada
+* Evita matches “criativos demais” em títulos curtos ou muito genéricos
+* Mantém aliases explícitos separados, sem enfraquecer a regra geral
 
 **Protege franquias numeradas**
 
-- `Forza Horizon 3` nunca deve casar com `Forza Horizon 4`
-- `Forza Horizon 4` nunca deve casar com `Forza Horizon 5`
-- `Resident Evil 2` nunca deve casar com `Resident Evil 3`
-- `Halo Wars 2` nunca deve casar com `Halo Wars 3`
+* `Forza Horizon 3` nunca deve casar com `Forza Horizon 4`
+* `Forza Horizon 4` nunca deve casar com `Forza Horizon 5`
+* `Resident Evil 2` nunca deve casar com `Resident Evil 3`
+* `Halo Wars 2` nunca deve casar com `Halo Wars 3`
 
 ### Features usadas pelo modelinho
 
-| Grupo | Features |
-|---|---|
-| Similaridade fuzzy | `token_set_ratio`, `token_sort_ratio`, `ratio`, `partial_ratio` |
-| Igualdade textual | igualdade normalizada, igualdade compacta e contenção de string |
-| Igualdade canônica | igualdade com e sem descritores, inclusive stripping de sufixos como `Ultimate Edition` e `PC Edition` |
-| Similaridade por tokens | overlap e Jaccard de tokens gerais, relevantes e canônicos |
-| Regras de sequência | conflito explícito de franquia/número, comparação de números romanos/arábicos e anos |
-| Sinais estruturais | diferença de comprimento, contagem de tokens extras e interseção de tokens fortes |
+| Grupo                   | Features                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| Similaridade fuzzy      | `token_set_ratio`, `token_sort_ratio`, `ratio`, `partial_ratio`                                        |
+| Igualdade textual       | igualdade normalizada, igualdade compacta e contenção de string                                        |
+| Igualdade canônica      | igualdade com e sem descritores, inclusive stripping de sufixos como `Ultimate Edition` e `PC Edition` |
+| Similaridade por tokens | overlap e Jaccard de tokens gerais, relevantes e canônicos                                             |
+| Regras de sequência     | conflito explícito de franquia/número, comparação de números romanos/arábicos e anos                   |
+| Sinais estruturais      | diferença de comprimento, contagem de tokens extras e interseção de tokens fortes                      |
 
 ### Estratégia de treino
 
-- positivos reais extraídos do dataset atual
-- positivos sintéticos gerados a partir do catálogo da Steam
-- variações artificiais de sufixos e edições:
-  - `Ultimate Edition`
-  - `Definitive Edition`
-  - `PC Edition`
-  - `Digital Edition`
-- hard negative mining com candidatos textualmente parecidos
-- hard negatives de franquia, principalmente quando a série é igual mas o número muda
-- casos automáticos gerados a partir do próprio catálogo da Steam, cobrindo:
-  - apóstrofo
-  - `&`
-  - `:`
-  - números romanos
-  - anos
-  - edições
-  - nomes com parênteses
-  - non-ASCII
-  - títulos muito longos
+* positivos reais extraídos do dataset atual
+* positivos sintéticos gerados a partir do catálogo da Steam
+* variações artificiais de sufixos e edições:
+
+  * `Ultimate Edition`
+  * `Definitive Edition`
+  * `PC Edition`
+  * `Digital Edition`
+* hard negative mining com candidatos textualmente parecidos
+* hard negatives de franquia, principalmente quando a série é igual mas o número muda
+* casos automáticos gerados a partir do próprio catálogo da Steam, cobrindo:
+
+  * apóstrofo
+  * `&`
+  * `:`
+  * números romanos
+  * anos
+  * edições
+  * nomes com parênteses
+  * non-ASCII
+  * títulos muito longos
 
 ### Como treinar e validar
 
@@ -464,9 +501,9 @@ python tools/catalog_match_guard_suite.py
 
 O benchmark separa três níveis:
 
-- `PURE_MODEL_ACCURACY`
-- `HYBRID_MODEL_ACCURACY`
-- `LOOKUP_ACCURACY`
+* `PURE_MODEL_ACCURACY`
+* `HYBRID_MODEL_ACCURACY`
+* `LOOKUP_ACCURACY`
 
 ### Fluxo de decisão
 
@@ -481,20 +518,20 @@ flowchart LR
 
 As regras de segurança continuam mandando no resultado final:
 
-- conflito de franquia e número rejeita o candidato
-- match canônico forte pode validar mesmo quando o fuzzy tem ruído
-- casos históricos podem ser resolvidos por alias explícito
-- rejeições importantes vão para `low_confidence_matches.json`
+* conflito de franquia e número rejeita o candidato
+* match canônico forte pode validar mesmo quando o fuzzy tem ruído
+* casos históricos podem ser resolvidos por alias explícito
+* rejeições importantes vão para `low_confidence_matches.json`
 
 ### Métricas locais atuais
 
-| Métrica | Resultado |
-|---|---|
-| Holdout do treino | `99%+` |
-| Benchmark do modelo puro | `24/24` |
-| Benchmark do pipeline híbrido | `24/24` |
-| Benchmark de lookup real | `24/24` |
-| Bateria funcional ampliada | `50/50` |
+| Métrica                            | Resultado                                 |
+| ---------------------------------- | ----------------------------------------- |
+| Holdout do treino                  | `99%+`                                    |
+| Benchmark do modelo puro           | `24/24`                                   |
+| Benchmark do pipeline híbrido      | `24/24`                                   |
+| Benchmark de lookup real           | `24/24`                                   |
+| Bateria funcional ampliada         | `50/50`                                   |
 | Suíte automática do catálogo Steam | `223/237` positivos e `160/160` negativos |
 
 > [!NOTE]
@@ -504,31 +541,31 @@ As regras de segurança continuam mandando no resultado final:
 
 A suíte baseada no `steam_applist_full.json` gera casos sintéticos a partir de jogos reais da Steam para forçar o matcher em cenários difíceis:
 
-- remover apóstrofos
-- trocar `&` por `and`
-- colapsar pontuação
-- remover sufixos de edição
-- testar nomes com romanos, anos, non-ASCII e títulos longos
-- validar colisões entre jogos da mesma franquia com número diferente
+* remover apóstrofos
+* trocar `&` por `and`
+* colapsar pontuação
+* remover sufixos de edição
+* testar nomes com romanos, anos, non-ASCII e títulos longos
+* validar colisões entre jogos da mesma franquia com número diferente
 
 Os números mais importantes dessa suíte são:
 
-| Grupo | Resultado |
-|---|---|
-| Positivos por catálogo | `223/237` |
+| Grupo                                     | Resultado |
+| ----------------------------------------- | --------- |
+| Positivos por catálogo                    | `223/237` |
 | Negativos por conflito de franquia/número | `160/160` |
 
 Os positivos que ainda falham não costumam ser “erro bruto do modelo. Em geral são casos em que a transformação deixa o nome ambíguo demais, por exemplo:
 
-- título delistado ou legado que só existe na Steam com um subtítulo/classificador específico
-- nome base genérico demais depois de remover `(...)`
-- casos em que cortar tudo antes/depois de `:` deixa o jogo com poucas palavras úteis
+* título delistado ou legado que só existe na Steam com um subtítulo/classificador específico
+* nome base genérico demais depois de remover `(...)`
+* casos em que cortar tudo antes/depois de `:` deixa o jogo com poucas palavras úteis
 
 Isso é útil porque mostra exatamente onde vale investir em:
 
-- alias explícito
-- regras específicas de legado/collection/classic
-- revisão manual via `low_confidence_matches.json`
+* alias explícito
+* regras específicas de legado/collection/classic
+* revisão manual via `low_confidence_matches.json`
 
 ## 📋 Novo Formato De Log
 
@@ -544,39 +581,39 @@ Exemplo:
 
 ### Campos da linha
 
-| Campo | Significado |
-|---|---|
-| status final | `✅`, `⚠️` ou `❌` |
-| `[atual/total]` | progresso do processamento |
-| nome | título truncado para leitura rápida |
-| `T:OK / T:!!` | status do torrent |
-| `S:OK / S:!!` | status do match Steam |
-| `G:canon / alias / model / fuzzy / --` | origem do match Steam |
-| `R:NEW / UPD / OLD` | se o item é novo, update ou apenas já conhecido |
-| `ms` | latência total por jogo |
-| `P:NNN` | página de origem no Online-Fix |
-| `🌐 / 🏠` | proxy ativo ou conexão local |
-| `M:NNNMB` | memória do processo quando disponível |
-| motivo final | resumo do resultado ou da falha |
-| horário | timestamp local da linha em `America/Sao_Paulo` |
+| Campo                                  | Significado                                     |
+| -------------------------------------- | ----------------------------------------------- |
+| status final                           | `✅`, `⚠️` ou `❌`                                |
+| `[atual/total]`                        | progresso do processamento                      |
+| nome                                   | título truncado para leitura rápida             |
+| `T:OK / T:!!`                          | status do torrent                               |
+| `S:OK / S:!!`                          | status do match Steam                           |
+| `G:canon / alias / model / fuzzy / --` | origem do match Steam                           |
+| `R:NEW / UPD / OLD`                    | se o item é novo, update ou apenas já conhecido |
+| `ms`                                   | latência total por jogo                         |
+| `P:NNN`                                | página de origem no Online-Fix                  |
+| `🌐 / 🏠`                              | proxy ativo ou conexão local                    |
+| `M:NNNMB`                              | memória do processo quando disponível           |
+| motivo final                           | resumo do resultado ou da falha                 |
+| horário                                | timestamp local da linha em `America/Sao_Paulo` |
 
 ### Motivos finais mais comuns
 
-| Motivo | Significado |
-|---|---|
-| `OK` | torrent e Steam resolvidos com sucesso |
-| `low_confidence` | candidato Steam rejeitado por confiança insuficiente |
-| `keyword_missing` | palavra-chave obrigatória da franquia não apareceu no candidato |
-| `NO_TORRENT_LINK` | página existe, mas o link de torrent não foi encontrado |
-| `401` / `404` / `429` | código HTTP relevante da tentativa |
-| `Timeout`, `ConnectionError`, etc. | exceção capturada durante o processo |
+| Motivo                             | Significado                                                     |
+| ---------------------------------- | --------------------------------------------------------------- |
+| `OK`                               | torrent e Steam resolvidos com sucesso                          |
+| `low_confidence`                   | candidato Steam rejeitado por confiança insuficiente            |
+| `keyword_missing`                  | palavra-chave obrigatória da franquia não apareceu no candidato |
+| `NO_TORRENT_LINK`                  | página existe, mas o link de torrent não foi encontrado         |
+| `401` / `404` / `429`              | código HTTP relevante da tentativa                              |
+| `Timeout`, `ConnectionError`, etc. | exceção capturada durante o processo                            |
 
 ### Objetivo do formato novo
 
-- reduzir spam de logs intermediários
-- concentrar tudo que importa em uma linha por jogo
-- facilitar debug visual em terminal, runner e GitHub Actions
-- deixar latência, rede, origem do match e status de `new/update` visíveis sem precisar abrir stacktrace
+* reduzir spam de logs intermediários
+* concentrar tudo que importa em uma linha por jogo
+* facilitar debug visual em terminal, runner e GitHub Actions
+* deixar latência, rede, origem do match e status de `new/update` visíveis sem precisar abrir stacktrace
 
 ## ⚙ Configuração Local
 
@@ -613,9 +650,9 @@ GITHUB_BRANCH=games
 
 `PROXY_LIST_URL` aceita:
 
-- Uma única URL
-- Várias URLs separadas por `;`
-- Várias URLs separadas por quebra de linha
+* Uma única URL
+* Várias URLs separadas por `;`
+* Várias URLs separadas por quebra de linha
 
 Exemplo com várias listas de proxy:
 
@@ -647,32 +684,32 @@ python scrapper.py --pages 10 --workers 8
 
 ### Argumentos CLI disponíveis
 
-| Argumento | Descrição |
-|---|---|
-| `--pages` | Última página a ser processada |
-| `--start-page` | Primeira página a ser processada |
-| `--workers` | Concorrência para tarefas de torrent + Steam |
-| `--baseurl` | Sobrescreve a URL base do Online-Fix |
-| `--user` | Sobrescreve o usuário |
-| `--password` | Sobrescreve a senha |
-| `--cookie` | Cookie manual `online_fix_auth` |
+| Argumento      | Descrição                                    |
+| -------------- | -------------------------------------------- |
+| `--pages`      | Última página a ser processada               |
+| `--start-page` | Primeira página a ser processada             |
+| `--workers`    | Concorrência para tarefas de torrent + Steam |
+| `--baseurl`    | Sobrescreve a URL base do Online-Fix         |
+| `--user`       | Sobrescreve o usuário                        |
+| `--password`   | Sobrescreve a senha                          |
+| `--cookie`     | Cookie manual `online_fix_auth`              |
 
 ## 🤖 GitHub Actions
 
 Este repositório inclui três workflows:
 
-| Workflow | Finalidade |
-|---|---|
-| `scrape.yml` | Executa o scraper e atualiza JSON + torrents + stats |
-| `steam-applist.yml` | Atualiza o catálogo da Steam |
-| `clean.yml` | Remove dados gerados da branch |
+| Workflow            | Finalidade                                           |
+| ------------------- | ---------------------------------------------------- |
+| `scrape.yml`        | Executa o scraper e atualiza JSON + torrents + stats |
+| `steam-applist.yml` | Atualiza o catálogo da Steam                         |
+| `clean.yml`         | Remove dados gerados da branch                       |
 
 ### Secrets necessários
 
-- `ONLINEFIX_USER`
-- `ONLINEFIX_PASS`
-- `PROXY_LIST_URL` opcional, aceita uma ou várias URLs de lista de proxy
-- `STEAM_API_KEY` apenas para `steam_applist.py`
+* `ONLINEFIX_USER`
+* `ONLINEFIX_PASS`
+* `PROXY_LIST_URL` opcional, aceita uma ou várias URLs de lista de proxy
+* `STEAM_API_KEY` apenas para `steam_applist.py`
 
 ## 🏷️ Badges Dinâmicas Com `stats.json`
 
@@ -688,19 +725,19 @@ O parâmetro `url=` deve ser URL-encoded ao montar badges dinâmicas com JSON no
 
 Consultas úteis:
 
-| Rótulo | Query |
-|---|---|
-| Total Games | `%24.total_games` |
-| Steam Matched | `%24.steam_with_metadata` |
-| Steam Missing | `%24.steam_without_metadata` |
-| Success Rate | `%24.success_rate` |
-| Online-Fix Pages | `%24.online_fix_pages_total` |
-| Torrent Files | `%24.torrent_files_total` |
-| Last Update | `%24.last_scrape_at_display` |
+| Rótulo             | Query                                  |
+| ------------------ | -------------------------------------- |
+| Total Games        | `%24.total_games`                      |
+| Steam Matched      | `%24.steam_with_metadata`              |
+| Steam Missing      | `%24.steam_without_metadata`           |
+| Success Rate       | `%24.success_rate`                     |
+| Online-Fix Pages   | `%24.online_fix_pages_total`           |
+| Torrent Files      | `%24.torrent_files_total`              |
+| Last Update        | `%24.last_scrape_at_display`           |
 | New Added This Run | `%24.new_games_added_to_json_this_run` |
-| Updated This Run | `%24.updated_games_this_run` |
-| JSON Torrents | `%24.json_entries_with_torrent` |
-| Last Page | `%24.last_page_in_json` |
+| Updated This Run   | `%24.updated_games_this_run`           |
+| JSON Torrents      | `%24.json_entries_with_torrent`        |
+| Last Page          | `%24.last_page_in_json`                |
 
 > [!NOTE]
 > O Shields.io usa cache, então as badges nem sempre atualizam imediatamente.
@@ -724,11 +761,11 @@ Consultas úteis:
 
 ## 🛠 Notas Operacionais
 
-- O site alvo retorna conteúdo não UTF-8 em algumas respostas
-- O bypass do Cloudflare usa `cloudscraper` quando disponível
-- Os metadados da Steam só são buscados após o match no catálogo local
-- Rotação de proxies ajuda a reduzir rate limit nas chamadas da Steam
-- Os links raw de torrent são normalizados para este repositório e para a branch `games`
+* O site alvo retorna conteúdo não UTF-8 em algumas respostas
+* O bypass do Cloudflare usa `cloudscraper` quando disponível
+* Os metadados da Steam só são buscados após o match no catálogo local
+* Rotação de proxies ajuda a reduzir rate limit nas chamadas da Steam
+* Os links raw de torrent são normalizados para este repositório e para a branch `games`
 
 ## ⚠ Importante
 
@@ -742,4 +779,4 @@ Consultas úteis:
 
 Este repositório é disponibilizado apenas para fins educacionais e de pesquisa.
 
-Veja a licença completa e o aviso legal em [LICENSE](C:/Users/Administrator/Pictures/Gaming-Rumble/LICENSE).
+Veja a licença completa e o aviso legal em [LICENSE](https://github.com/zKauaFerreira/The-Gaming-Rumble/blob/main/LICENSE).
