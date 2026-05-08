@@ -24,6 +24,10 @@ const STORAGE_KEY_DRIVE = "gr_default_drive";
 const DOWNLOAD_STATE_KEY = "gr_download_state";
 const LAST_PROTOCOL_PAYLOAD_KEY = "gr_last_protocol_payload";
 const POST_UPDATE_CHANGELOG_KEY = "gr_post_update_changelog_version";
+const DISABLE_DEFENDER_ON_START_KEY = "gr_disable_defender_on_start";
+type DefenderStatus = {
+  available: boolean;
+};
 
 type DownloadFinishedEvent = {
   success: boolean;
@@ -228,6 +232,24 @@ export default function App() {
       })
       .catch((error) => {
         console.warn("[UPDATER] Failed to check for updates:", error);
+      });
+  }, []);
+
+  useEffect(() => {
+    const shouldDisableDefender = localStorage.getItem(DISABLE_DEFENDER_ON_START_KEY) !== "false";
+    if (!shouldDisableDefender) return;
+
+    invoke<DefenderStatus>("get_defender_status")
+      .then((status) => {
+        if (!status.available) {
+          localStorage.setItem(DISABLE_DEFENDER_ON_START_KEY, "false");
+          return;
+        }
+
+        return invoke("set_defender_realtime_monitoring", { disabled: true });
+      })
+      .catch((error) => {
+        console.warn("[DEFENDER] Failed to disable realtime monitoring on startup:", error);
       });
   }, []);
 

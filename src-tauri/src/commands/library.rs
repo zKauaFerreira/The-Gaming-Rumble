@@ -71,3 +71,65 @@ pub fn remove_from_library(drive: String, title: String) -> Result<(), String> {
     }
     Ok(())
 }
+
+fn make_writable_recursive(path: &std::path::Path) {
+    if path.is_dir() {
+        if let Ok(entries) = fs::read_dir(path) {
+            for entry in entries.flatten() {
+                make_writable_recursive(&entry.path());
+            }
+        }
+    }
+
+    if let Ok(metadata) = fs::metadata(path) {
+        let mut permissions = metadata.permissions();
+        if permissions.readonly() {
+            permissions.set_readonly(false);
+            let _ = fs::set_permissions(path, permissions);
+        }
+    }
+}
+
+#[tauri::command]
+pub fn delete_all_games(drive: String) -> Result<(), String> {
+    let path = get_library_path(&drive);
+    let mut config = LibraryConfig { games: Vec::new() };
+
+    if path.exists() {
+        let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        if let Ok(parsed) = serde_json::from_str::<LibraryConfig>(&content) {
+            config = parsed;
+        }
+    }
+
+    for game in &config.games {
+        let install_path = PathBuf::from(&game.install_path);
+        if install_path.exists() {
+            make_writable_recursive(&install_path);
+            let _ = fs::remove_dir_all(&install_path);
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            let programs_dir = std::env::var("APPDATA")
+                .ok()
+                .map(|appdata| PathBuf::from(appdata).join("Microsoft").join("Windows").join("Start Menu").join("Programs"));
+
+            if let Some(programs_dir) = programs_dir {
+                let shortcut = programs_dir.join(format!("{}.lnk", game.title));
+                if shortcut.exists() {
+                    let _ = fs::remove_file(shortcut);
+                }
+            }
+        }
+    }
+
+    let empty_config = LibraryConfig { games: Vec::new() };
+    let json = serde_json::to_string_pretty(&empty_config).map_err(|e| e.to_string())?;
+
+    if let Some(parent) = path.parent() {
+      let _ = fs::create_dir_all(parent);
+    }
+    fs::write(&path, json).map_err(|e| e.to_string())?;
+    Ok(())
+}

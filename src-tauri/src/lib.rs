@@ -9,11 +9,11 @@ use std::env::current_exe;
 use std::sync::Mutex;
 use tauri::{Manager, Emitter};
 use commands::{
-    system::{check_is_admin, add_defender_exclusion, create_gaming_rumble_folder, play_game, open_path, update_executable, show_exe_picker, create_shortcut, remove_shortcut, shortcut_exists, get_system_status},
+    system::{check_is_admin, add_defender_exclusion, create_gaming_rumble_folder, set_defender_realtime_monitoring, get_defender_status, play_game, open_path, update_executable, show_exe_picker, create_shortcut, remove_shortcut, shortcut_exists, get_system_status},
     disk::{list_drives, get_disk_space},
     torrent::{start_torrent, stop_torrent, start_fix_download},
     archive::{extract_game, delete_folder, finalize_installation},
-    library::{get_library, add_to_library, remove_from_library},
+    library::{get_library, add_to_library, remove_from_library, delete_all_games},
     update::{check_for_app_update, install_app_update, PendingUpdate}
 };
 
@@ -95,6 +95,8 @@ pub fn run() {
             get_disk_space,
             check_is_admin,
             add_defender_exclusion,
+            set_defender_realtime_monitoring,
+            get_defender_status,
             create_gaming_rumble_folder,
             extract_game,
             delete_folder,
@@ -105,6 +107,7 @@ pub fn run() {
             get_library,
             add_to_library,
             remove_from_library,
+            delete_all_games,
             play_game,
             open_path,
             show_exe_picker,

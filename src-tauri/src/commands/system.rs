@@ -32,6 +32,11 @@ pub struct SystemStatus {
     pub seven_zip_version: String,
 }
 
+#[derive(serde::Serialize)]
+pub struct DefenderStatus {
+    pub available: bool,
+}
+
 fn parse_tool_version(binary: &std::path::Path, args: &[&str], expected_prefixes: &[&str], fallback_label: &str) -> String {
     let output = Command::new(binary)
         .args(args)
@@ -90,6 +95,35 @@ fn find_7zip(app: &AppHandle) -> Option<PathBuf> {
     None
 }
 
+fn is_defender_available() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        let output = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-WindowStyle",
+                "Hidden",
+                "-Command",
+                "$ErrorActionPreference='Stop'; try { Get-MpComputerStatus | Out-Null; Write-Output 'true' } catch { Write-Output 'false' }",
+            ])
+            .creation_flags(0x08000000)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output();
+
+        let Ok(output) = output else {
+            return false;
+        };
+
+        String::from_utf8_lossy(&output.stdout).trim().eq_ignore_ascii_case("true")
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        false
+    }
+}
+
 #[tauri::command]
 pub fn check_is_admin() -> bool {
     #[cfg(target_os = "windows")]
@@ -133,6 +167,46 @@ pub fn add_defender_exclusion(path: String) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+#[tauri::command]
+pub fn set_defender_realtime_monitoring(disabled: bool) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        if !is_defender_available() {
+            return Err("Windows Defender indisponivel neste sistema.".into());
+        }
+
+        let preference = if disabled { "$true" } else { "$false" };
+        let status = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-WindowStyle",
+                "Hidden",
+                "-Command",
+                &format!("Set-MpPreference -DisableRealtimeMonitoring {} 2>$null", preference),
+            ])
+            .creation_flags(0x08000000)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map_err(|e| e.to_string())?;
+
+        if !status.success() {
+            return Err("Falha ao alterar o estado do Windows Defender.".into());
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_defender_status() -> DefenderStatus {
+    DefenderStatus {
+        available: is_defender_available(),
+    }
 }
 
 #[tauri::command]
