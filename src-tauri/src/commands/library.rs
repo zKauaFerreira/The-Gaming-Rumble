@@ -67,19 +67,6 @@ fn open_database() -> Result<Connection, String> {
     Ok(conn)
 }
 
-fn write_legacy_library_json(drive: &str, games: &[LibraryEntry]) -> Result<(), String> {
-    let path = legacy_library_path(drive);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-
-    let json = serde_json::to_string_pretty(&LibraryConfig {
-        games: games.to_vec(),
-    })
-    .map_err(|e| e.to_string())?;
-    fs::write(path, json).map_err(|e| e.to_string())
-}
-
 fn normalize_drive(drive: &str) -> String {
     drive.trim().trim_end_matches('\\').to_ascii_uppercase()
 }
@@ -172,29 +159,6 @@ fn query_games(conn: &Connection, drive: &str) -> Result<Vec<LibraryEntry>, Stri
     rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
 }
 
-fn ensure_drive_imported(conn: &Connection, drive: &str) -> Result<(), String> {
-    let normalized_drive = normalize_drive(drive);
-    let count: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM games WHERE drive = ?1",
-            [normalized_drive.clone()],
-            |row| row.get(0),
-        )
-        .map_err(|e| e.to_string())?;
-
-    if count > 0 {
-        return Ok(());
-    }
-
-    let _ = normalized_drive;
-    import_drive_legacy_json(conn, drive).map(|_| ())
-}
-
-fn sync_legacy_library(conn: &Connection, drive: &str) -> Result<(), String> {
-    let games = query_games(conn, drive)?;
-    write_legacy_library_json(drive, &games)
-}
-
 pub fn run_one_time_legacy_import() -> Result<(), String> {
     let marker = legacy_import_marker_path()?;
     if marker.exists() {
@@ -202,7 +166,6 @@ pub fn run_one_time_legacy_import() -> Result<(), String> {
     }
 
     let conn = open_database()?;
-    let mut imported_any = false;
 
     for letter in 'A'..='Z' {
         let drive = format!("{letter}:\\");
@@ -212,21 +175,7 @@ pub fn run_one_time_legacy_import() -> Result<(), String> {
         }
 
         if import_drive_legacy_json(&conn, &drive)? {
-            imported_any = true;
-        }
-    }
-
-    if imported_any {
-        let mut drives_with_games = conn
-            .prepare("SELECT DISTINCT drive FROM games")
-            .map_err(|e| e.to_string())?;
-        let rows = drives_with_games
-            .query_map([], |row| row.get::<_, String>(0))
-            .map_err(|e| e.to_string())?;
-
-        for drive in rows {
-            let drive = drive.map_err(|e| e.to_string())?;
-            sync_legacy_library(&conn, &drive)?;
+            let _ = fs::remove_file(&legacy_path);
         }
     }
 
@@ -254,8 +203,6 @@ fn make_writable_recursive(path: &Path) {
 
 pub fn update_executable_path(drive: &str, title: &str, executable: &str) -> Result<(), String> {
     let conn = open_database()?;
-    ensure_drive_imported(&conn, drive)?;
-
     let normalized_drive = normalize_drive(drive);
     let rows = conn
         .execute(
@@ -271,8 +218,6 @@ pub fn update_executable_path(drive: &str, title: &str, executable: &str) -> Res
     if rows == 0 {
         return Err("Jogo nao encontrado na biblioteca".into());
     }
-
-    sync_legacy_library(&conn, drive)?;
     Ok(())
 }
 
@@ -282,7 +227,6 @@ pub fn add_play_time(drive: &str, title: &str, delta_ms: u64) -> Result<Option<L
     }
 
     let conn = open_database()?;
-    ensure_drive_imported(&conn, drive)?;
     let normalized_drive = normalize_drive(drive);
 
     let rows = conn
@@ -321,22 +265,18 @@ pub fn add_play_time(drive: &str, title: &str, delta_ms: u64) -> Result<Option<L
         )
         .optional()
         .map_err(|e| e.to_string())?;
-
-    sync_legacy_library(&conn, drive)?;
     Ok(entry)
 }
 
 #[tauri::command]
 pub fn get_library(drive: String) -> Result<Vec<LibraryEntry>, String> {
     let conn = open_database()?;
-    ensure_drive_imported(&conn, &drive)?;
     query_games(&conn, &drive)
 }
 
 #[tauri::command]
 pub fn add_to_library(drive: String, entry: LibraryEntry) -> Result<(), String> {
     let conn = open_database()?;
-    ensure_drive_imported(&conn, &drive)?;
     let normalized_drive = normalize_drive(&drive);
 
     conn.execute(
@@ -365,15 +305,12 @@ pub fn add_to_library(drive: String, entry: LibraryEntry) -> Result<(), String> 
         ],
     )
     .map_err(|e| e.to_string())?;
-
-    sync_legacy_library(&conn, &drive)?;
     Ok(())
 }
 
 #[tauri::command]
 pub fn remove_from_library(drive: String, title: String) -> Result<(), String> {
     let conn = open_database()?;
-    ensure_drive_imported(&conn, &drive)?;
     let normalized_drive = normalize_drive(&drive);
 
     conn.execute(
@@ -381,15 +318,12 @@ pub fn remove_from_library(drive: String, title: String) -> Result<(), String> {
         params![normalized_drive, title],
     )
     .map_err(|e| e.to_string())?;
-
-    sync_legacy_library(&conn, &drive)?;
     Ok(())
 }
 
 #[tauri::command]
 pub fn delete_all_games(drive: String) -> Result<(), String> {
     let conn = open_database()?;
-    ensure_drive_imported(&conn, &drive)?;
     let games = query_games(&conn, &drive)?;
 
     for game in &games {
@@ -425,7 +359,5 @@ pub fn delete_all_games(drive: String) -> Result<(), String> {
         [normalize_drive(&drive)],
     )
     .map_err(|e| e.to_string())?;
-
-    sync_legacy_library(&conn, &drive)?;
     Ok(())
 }

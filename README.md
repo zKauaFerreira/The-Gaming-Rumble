@@ -57,7 +57,7 @@ Ele automatiza todo o fluxo de instalação dos jogos:
 - Cria atalhos automaticamente
 - Monitora sessões iniciadas pelo launcher
 - Mantém gerenciamento persistente da biblioteca
-- Importa automaticamente bibliotecas legadas em `JSON` no primeiro boot compatível
+- Importa automaticamente bibliotecas legadas em `JSON` no primeiro boot compatível e finaliza a transição para `SQLite`
 
 O foco do projeto é reduzir atrito e automatizar processos repetitivos.
 
@@ -330,7 +330,7 @@ O workflow automatiza:
 - O botão de fechar envia o launcher para o tray em vez de encerrar imediatamente
 - O estado dos downloads sobrevive a reload durante desenvolvimento
 - A biblioteca é mantida localmente pelo client com banco `SQLite`
-- Bibliotecas antigas em `library.json` são migradas automaticamente uma única vez quando encontradas
+- Bibliotecas antigas em `library.json` são migradas automaticamente uma única vez quando encontradas e depois deixam de ser usadas
 - O fluxo foi desenhado para integração com o ecossistema Gaming Rumble
 - O projeto não pretende ser um client torrent genérico
 
