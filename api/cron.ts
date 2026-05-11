@@ -6,10 +6,19 @@ const GAMES_SOURCE =
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const cronSecret = process.env.CRON_SECRET;
-  const authHeader = req.headers["authorization"];
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return res.status(401).end("Unauthorized");
+  if (!cronSecret) {
+    return res.status(500).json({ error: "CRON_SECRET not configured" });
+  }
+
+  const authHeader = req.headers["authorization"] as string | undefined;
+
+  if (!authHeader) {
+    return res.status(401).json({ error: "Authorization header missing" });
+  }
+
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return res.status(403).json({ error: "Invalid token" });
   }
 
   const upstream = await fetch(GAMES_SOURCE);
