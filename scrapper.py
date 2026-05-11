@@ -1977,15 +1977,14 @@ class OnlineFixScraper:
             else:
                 torrent_reason = torrent_meta.get("reason", "NO_TORRENT_LINK")
 
-            # --- Hosters ---
+            if not torrent_ok:
+                latency_ms = int((time.time() - started_at) * 1000)
+                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, torrent_reason, run_state=run_state, hoster_count=0))
+                return None
+
+            # --- Hosters (só busca se torrent OK) ---
             hoster_links = self.fetch_hoster_links(title)
             hoster_count = len(hoster_links) if hoster_links else 0
-
-            # Descarta só se não há nenhum método de download
-            if not torrent_ok and not hoster_links:
-                latency_ms = int((time.time() - started_at) * 1000)
-                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, torrent_reason, run_state=run_state, hoster_count=hoster_count))
-                return None
 
             current_scraped_game = {
                 "title": title,
