@@ -1527,7 +1527,25 @@ class OnlineFixScraper:
                 continue
         return None
 
-    def find_torrent_robust(self, title):
+    def _torrent_hints_from_hosters(self, hoster_links):
+        """Deriva nomes de arquivo .torrent a partir dos nomes de arquivo dos hosters."""
+        if not hoster_links:
+            return []
+        files = next(iter(hoster_links.values()), [])
+        seen = set()
+        hints = []
+        for f in files:
+            fname = f.get('file_name', '')
+            if not fname or 'fix' in fname.lower() or 'repair' in fname.lower():
+                continue
+            base = re.sub(r'\.part\d+\.rar$', '', fname, flags=re.I)
+            base = re.sub(r'\.rar$', '', base, flags=re.I)
+            if base and base not in seen:
+                seen.add(base)
+                hints.append(base + '.torrent')
+        return hints
+
+    def find_torrent_robust(self, title, hoster_hints=None):
         self._set_webdav_cookies()
         last_reason = {"reason": "NO_TORRENT_LINK", "status_code": 404}
         # Normaliza o título base
@@ -1582,6 +1600,30 @@ class OnlineFixScraper:
                 quoted_name = quote(formatted_name, safe='')
                 if quoted_name not in direct_variations:
                     direct_variations.append(quoted_name)
+
+        # Fase 0: tenta URLs exatas derivadas dos nomes de arquivo dos hosters
+        # Ex: WEBDAV_ROOT/Beyond Sandbox/Beyond.Sandbox.v0.10.4-OFME.torrent
+        if hoster_hints:
+            for variant_name in name_variants:
+                folder = quote(variant_name, safe='')
+                for torrent_filename in hoster_hints:
+                    hint_url = f"{WEBDAV_ROOT}{folder}/{quote(torrent_filename, safe='')}"
+                    try:
+                        time.sleep(random.uniform(0.1, 0.3))
+                        resp = self.session.get(hint_url, headers=WEBDAV_HEADERS, timeout=(5, 10))
+                        if resp.status_code == 200:
+                            webdav_date = resp.headers.get('last-modified', 'Unknown')
+                            return hint_url, webdav_date, hint_url, {"reason": "OK", "status_code": 200}
+                        if resp.status_code == 401:
+                            # Tenta mais uma vez (transient)
+                            time.sleep(1)
+                            resp2 = self.session.get(hint_url, headers=WEBDAV_HEADERS, timeout=(5, 10))
+                            if resp2.status_code == 200:
+                                webdav_date = resp2.headers.get('last-modified', 'Unknown')
+                                return hint_url, webdav_date, hint_url, {"reason": "OK", "status_code": 200}
+                            last_reason = {"reason": "401", "status_code": 401}
+                    except Exception:
+                        pass
 
         # Tenta acesso direto primeiro
         for direct_var in direct_variations:
@@ -1899,6 +1941,11 @@ class OnlineFixScraper:
             page_dir = os.path.join(TORRENT_DIR, f"batch_{p}")
             os.makedirs(page_dir, exist_ok=True)
 
+            # --- Hosters primeiro: filenames usados como hints pro torrent ---
+            hoster_links = self.fetch_hoster_links(title)
+            hoster_count = len(hoster_links) if hoster_links else 0
+            hoster_hints = self._torrent_hints_from_hosters(hoster_links)
+
             # --- Torrent (falha não descarta o jogo se houver hosters) ---
             torrent_ok = False
             metadata = None
@@ -1906,7 +1953,7 @@ class OnlineFixScraper:
             webdav_date = None
             torrent_reason = "NO_TORRENT_LINK"
 
-            torrent_url, webdav_date_raw, folder_url, torrent_meta = self.find_torrent_robust(title)
+            torrent_url, webdav_date_raw, folder_url, torrent_meta = self.find_torrent_robust(title, hoster_hints=hoster_hints)
             if torrent_url:
                 webdav_date = webdav_date_raw
                 t_resp = None
@@ -1946,10 +1993,6 @@ class OnlineFixScraper:
                     torrent_reason = str(getattr(t_resp, 'status_code', 'TORRENT_DOWNLOAD_ERR'))
             else:
                 torrent_reason = torrent_meta.get("reason", "NO_TORRENT_LINK")
-
-            # --- Hosters (sempre buscado, independente do torrent) ---
-            hoster_links = self.fetch_hoster_links(title)
-            hoster_count = len(hoster_links) if hoster_links else 0
 
             # Descarta só se não há nenhum método de download
             if not torrent_ok and not hoster_links:
