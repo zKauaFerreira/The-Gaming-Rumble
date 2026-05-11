@@ -1826,10 +1826,9 @@ class OnlineFixScraper:
                     for item in all_data:
                         if item.get('title'):
                             item['title'] = self._normalize_game_title(item['title'])
-                        if 'url' in item:
-                            existing_links.add(item['url'])
                         if item.get('torrent_file'):
                             item['torrent_file'] = self._normalize_torrent_link(item['torrent_file'])
+                            existing_links.add(item['url'])  # só pula se já tem torrent
                     print(f"📦 {len(all_data)} jogos carregados do banco de dados existente.")
             except Exception as e:
                 print(f"⚠️ Erro ao carregar banco de dados atual: {e}")
@@ -2110,6 +2109,12 @@ class OnlineFixScraper:
                             "hoster_links": current_scraped_game.get('hoster_links') or existing_game_in_all_data.get('hoster_links'),
                             "scraped_at": self._format_now()
                         })
+                        # Se o existente não tem torrent mas o novo encontrou, preencher
+                        if not existing_game_in_all_data.get('torrent_file') and current_scraped_game.get('torrent_file'):
+                            for key in ['unique_hash', 'fileSize', 'magnet', 'torrent_file',
+                                        'created_at', 'webdav_updated_at', 'files', 'comment', 'steam']:
+                                if key in current_scraped_game:
+                                    updated_existing[key] = current_scraped_game[key]
                         # Substituir o item antigo com as informações atualizadas
                         for idx, item in enumerate(all_data):
                             if item['title'] == title:
