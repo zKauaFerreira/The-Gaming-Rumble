@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { type Game } from "./GameCatalog";
-import { makeProtocolUrl, toSlug } from "@/lib/games";
+import { makeProtocolUrl, toSlug, getGameDate } from "@/lib/games";
 import translationsData from "@/lib/translations.json";
 
 export function GameModal({ game, onClose }: { game: Game; onClose: () => void }) {
@@ -74,9 +74,9 @@ export function GameModal({ game, onClose }: { game: Game; onClose: () => void }
           <div>
             <h2 className="text-2xl font-bold mb-3">{game.title}</h2>
             <div className="flex flex-wrap gap-2">
-              {game.release_date && (
+              {getGameDate(game) && (
                 <Chip icon={<CalendarIcon className="w-3.5 h-3.5" />}>
-                  {game.release_date}
+                  {getGameDate(game)}
                 </Chip>
               )}
               <Chip icon={<HardDriveIcon className="w-3.5 h-3.5" />}>

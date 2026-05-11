@@ -7,13 +7,6 @@
 
 > Site do Gaming Rumble — catálogo de jogos com busca, filtros e paginação, integrado ao app desktop via protocolo customizado `gaming-rumble://` para download direto com um clique.
 
-## ✨ Snapshot Ao Vivo
-
-| Total de Jogos | Steam Encontrados | Steam Match Rate | Último Sync |
-|:---:|:---:|:---:|:---:|
-| ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.total_games&label=%20&color=2ea44f&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_with_metadata&label=%20&color=1f6feb&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.success_rate&suffix=%25&label=%20&color=8250df&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.last_scrape_at_display&label=%20&color=6f42c1&style=flat-square) |
-
----
 
 ## 📋 Índice
 

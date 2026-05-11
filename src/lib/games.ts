@@ -23,8 +23,10 @@ export interface Game {
   title: string;
   page: number;
   url: string;
-  last_update: string;
-  release_date: string;
+  last_update: string | null;
+  release_date: string | null;
+  update_date: string | null;
+  created_at: string | null;
   fileSize: string;
   magnet: string;
   torrent_file: string;
@@ -97,23 +99,42 @@ function parseSizeToBytes(size: string): number {
   }
 }
 
-function parseDMY(s: string): number {
-  const parts = s?.split(".");
-  if (parts?.length !== 3) return 0;
-  const [d, mo, y] = parts.map(Number);
-  return new Date(y, mo - 1, d).getTime();
+/* ── Best available date (update_date → last_update → created_at) ── */
+
+function parseAnyDate(raw: string | null | undefined): number {
+  if (!raw) return 0;
+  const t = new Date(raw.replace(" ", "T")).getTime();
+  return isNaN(t) ? 0 : t;
+}
+
+function bestTimestamp(game: Game): number {
+  return (
+    parseAnyDate(game.update_date) ||
+    parseAnyDate(game.last_update) ||
+    parseAnyDate(game.created_at)
+  );
+}
+
+export function getGameDate(game: Game): string | null {
+  const ts = bestTimestamp(game);
+  if (!ts) return null;
+  return new Date(ts).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 export function sortGames(games: Game[], sort: SortId | null): Game[] {
   if (!sort) return games;
   const arr = [...games];
   switch (sort) {
-    case "az":      return arr.sort((a, b) => a.title.localeCompare(b.title));
-    case "za":      return arr.sort((a, b) => b.title.localeCompare(a.title));
-    case "newest":  return arr.sort((a, b) => parseDMY(b.release_date) - parseDMY(a.release_date));
-    case "oldest":  return arr.sort((a, b) => parseDMY(a.release_date) - parseDMY(b.release_date));
-    case "largest": return arr.sort((a, b) => parseSizeToBytes(b.fileSize) - parseSizeToBytes(a.fileSize));
-    case "smallest":return arr.sort((a, b) => parseSizeToBytes(a.fileSize) - parseSizeToBytes(b.fileSize));
+    case "az":       return arr.sort((a, b) => a.title.localeCompare(b.title));
+    case "za":       return arr.sort((a, b) => b.title.localeCompare(a.title));
+    case "newest":   return arr.sort((a, b) => bestTimestamp(b) - bestTimestamp(a));
+    case "oldest":   return arr.sort((a, b) => bestTimestamp(a) - bestTimestamp(b));
+    case "largest":  return arr.sort((a, b) => parseSizeToBytes(b.fileSize) - parseSizeToBytes(a.fileSize));
+    case "smallest": return arr.sort((a, b) => parseSizeToBytes(a.fileSize) - parseSizeToBytes(b.fileSize));
   }
 }
 
