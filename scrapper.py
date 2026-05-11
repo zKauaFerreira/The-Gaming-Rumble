@@ -1484,22 +1484,26 @@ class OnlineFixScraper:
         """Busca todos os links de download de todos os hosters para um jogo."""
         encoded_title = quote(title, safe='')
         url = f"{HOSTERS_BASE_URL}{encoded_title}"
-        for attempt in range(3):
+        for attempt in range(4):
             proxy = self._get_next_proxy()
             try:
-                time.sleep(random.uniform(0.1, 0.4) * (attempt + 1))
+                time.sleep(random.uniform(0.2, 0.6) * (attempt + 1))
                 resp = self.session.get(url, timeout=15, proxies=proxy)
-                if resp.status_code == 429:
+                if resp.status_code == 404:
+                    return None  # jogo não existe no hosters, desiste
+                if resp.status_code in (429, 503):
                     time.sleep(10 * (attempt + 1))
                     continue
                 if resp.status_code != 200:
-                    return None
+                    # 403 = Cloudflare bloqueou, tenta com outro proxy
+                    time.sleep(3 * (attempt + 1))
+                    continue
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 options = soup.select('.option')
                 if not options:
-                    if attempt < 2:
-                        continue
-                    return None
+                    # página sem .option = CF managed challenge sem conteúdo, tenta de novo
+                    time.sleep(2 * (attempt + 1))
+                    continue
                 hosters = {}
                 for opt in options:
                     hoster_name = opt.get_text(strip=True)
@@ -1519,8 +1523,7 @@ class OnlineFixScraper:
                         continue
                 return hosters if hosters else None
             except Exception:
-                if attempt < 2:
-                    time.sleep(1 * (attempt + 1))
+                time.sleep(1 * (attempt + 1))
                 continue
         return None
 
