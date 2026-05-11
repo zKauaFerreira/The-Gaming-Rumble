@@ -1485,9 +1485,10 @@ class OnlineFixScraper:
         encoded_title = quote(title, safe='')
         url = f"{HOSTERS_BASE_URL}{encoded_title}"
         for attempt in range(3):
+            proxy = self._get_next_proxy()
             try:
                 time.sleep(random.uniform(0.1, 0.4) * (attempt + 1))
-                resp = self.session.get(url, timeout=15)
+                resp = self.session.get(url, timeout=15, proxies=proxy)
                 if resp.status_code == 429:
                     time.sleep(10 * (attempt + 1))
                     continue
