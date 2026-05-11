@@ -1,25 +1,17 @@
-<div align="center">
+# 🎮 Gaming Rumble (GR-Link)
 
-[![GR-Link Banner](public/favicon.png)](#)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/zKauaFerreira/The-Gaming-Rumble/refs/heads/main/public/banner.png" alt="Gaming Rumble Banner" width="100%" />
+</p>
+<br>
 
-# 🎮 GR-Link
+> Site do Gaming Rumble — catálogo de jogos com busca, filtros e paginação, integrado ao app desktop via protocolo customizado `gaming-rumble://` para download direto com um clique.
 
-> **Catálogo e ponte inteligente para o Gaming Rumble App** — exibe o acervo de jogos disponíveis, permite busca e filtragem, e ao baixar abre diretamente o app nativo via protocolo customizado.
+## ✨ Snapshot Ao Vivo
 
-[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-000000?style=for-the-badge&logo=shadcnui&logoColor=white)](https://ui.shadcn.com/)
-[![Bun](https://img.shields.io/badge/Bun-000000?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh/)
-[![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
-
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen?style=for-the-badge)](https://github.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellowgreen?style=for-the-badge)](#-licença)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge)](#-contribuindo)
-[![Made with ❤️](https://img.shields.io/badge/Made%20with-%E2%9D%A4-red?style=for-the-badge)](.)
-
-</div>
+| Total de Jogos | Steam Encontrados | Steam Match Rate | Último Sync |
+|:---:|:---:|:---:|:---:|
+| ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.total_games&label=%20&color=2ea44f&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.steam_with_metadata&label=%20&color=1f6feb&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.success_rate&suffix=%25&label=%20&color=8250df&style=flat-square) | ![](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FzKauaFerreira%2FThe-Gaming-Rumble%2Frefs%2Fheads%2Fgames%2Fstats.json&query=%24.last_scrape_at_display&label=%20&color=6f42c1&style=flat-square) |
 
 ---
 
@@ -28,269 +20,131 @@
 <details open>
 <summary><b>Clique para expandir/recolher</b></summary>
 
-- 📖 [Sobre o Projeto](#-sobre-o-projeto)
-- ✨ [Funcionalidades](#-funcionalidades)
-- 🧱 [Arquitetura](#-arquitetura)
+- 📌 [O Que Este Site Faz](#-o-que-este-site-faz)
 - 🔀 [Rotas](#-rotas)
-- 🚀 [Pré-requisitos](#-pré-requisitos)
-- 📦 [Instalação](#-instalação)
-- 💻 [Executando o Projeto](#-executando-o-projeto)
-- 🧪 [Build de Produção](#-build-de-produção)
-- 🌍 [Variáveis de Ambiente](#-variáveis-de-ambiente)
-- ⏰ [Cron Job — Atualização do Catálogo](#-cron-job--atualização-do-catálogo)
+- 🧱 [Arquitetura](#-arquitetura)
 - 📡 [Como Funciona o Deep Link](#-como-funciona-o-deep-link)
-- 🧩 [Exemplo de Payload](#-exemplo-de-payload)
-- 🗂️ [Estrutura do Projeto](#️-estrutura-do-projeto)
-- 🤝 [Contribuindo](#-contribuindo)
-- 📄 [Licença](#-licença)
+- ⏰ [Cron de Atualização do Catálogo](#-cron-de-atualização-do-catálogo)
+- 🌍 [Variáveis de Ambiente](#-variáveis-de-ambiente)
+- ⚙️ [Configuração Local](#️-configuração-local)
+- 🚀 [Uso](#-uso)
+- 📁 [Estrutura do Projeto](#-estrutura-do-projeto)
+- 📜 [Licença](#-licença)
 
 </details>
 
 ---
 
-## 📖 Sobre o Projeto
+## 📌 O Que Este Site Faz
 
-O **GR-Link** tem dois papéis principais:
+O GR-Link é o frontend do ecossistema Gaming Rumble.
 
-**1. Catálogo de Jogos** — exibe o acervo completo do Gaming Rumble com busca por nome, filtros de ordenação e paginação. Cada jogo tem um modal com requisitos de sistema, arquivos incluídos, preço na Steam e botão de compartilhamento.
+Ele tem dois papéis:
 
-**2. Ponte de Deep Link** — quando um usuário acessa um link de download gerado pelo app, o GR-Link decodifica o payload comprimido, tenta abrir o app nativo via protocolo `gaming-rumble://` e oferece fallback elegante caso o app não esteja instalado.
+**Catálogo**
 
-O catálogo é **atualizado diariamente de forma automática** via cron job na Vercel, buscando os dados mais recentes direto do repositório do Gaming Rumble.
+- Exibe todos os jogos indexados pelo Scrapper
+- Busca com ranking de relevância (exato > prefixo > palavra > parcial)
+- Filtros de ordenação: A→Z, Z→A, mais recente, mais antigo, maior, menor
+- Paginação via URL (`/page/:page`) com clamping automático
+- Modal com requisitos do sistema (EN→PT), arquivos incluídos, preço Steam e compartilhamento
+- URLs canônicas por jogo (`/game/:slug`)
 
----
+**Ponte de Deep Link**
 
-## ✨ Funcionalidades
-
-| Feature | Descrição |
-|:---:|---|
-| 📚 | **Catálogo completo** — +1.700 jogos com capa, descrição, tamanho e número de arquivos |
-| 🔍 | **Busca com ranking** — prioriza correspondência exata > prefixo > palavra > parcial |
-| 🗂️ | **Filtros de ordenação** — A→Z, Z→A, mais recente, mais antigo, maior, menor |
-| 📄 | **Paginação via URL** — `/page/10` preserva a página no histórico do navegador |
-| 🪟 | **Modal de detalhes** — requisitos do sistema traduzidos (EN→PT), arquivos, preço Steam |
-| 🔗 | **URLs canônicas de jogo** — `/game/ark-nova` abre o modal; `?download` dispara o protocolo |
-| 📋 | **Compartilhamento** — copia link com `?download` para enviar a outros usuários |
-| 🔐 | **Decodificação zlib+Base64** — payload compactado e seguro via URL |
-| 🚀 | **Auto-open via protocolo customizado** — abre o app nativo automaticamente |
-| ⏱️ | **Fallback inteligente** — detecta em 1,5s se o app não abriu e exibe alternativas |
-| 🪟 | **Auto-close tab** — fecha a aba automaticamente 5s após o app abrir |
-| ⏰ | **Cron automático** — catálogo sincronizado diariamente às 17h (BRT) via Vercel |
-| 📱 | **100% responsivo** — funciona em desktop e mobile |
-
----
-
-## 🧱 Arquitetura
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                        Browser                           │
-│                                                          │
-│   /page/:page  ──────►  GameCatalog                      │
-│   /game/:slug  ──────►  GameCatalog + GameModal          │
-│   /?data=...   ──────►  Index (deep link)                │
-│                                                          │
-│  ┌─────────────────────────────────────────────────┐     │
-│  │                 GameCatalog                     │     │
-│  │  useQuery → Vercel Blob (games.json)            │     │
-│  │  searchGames() → ranking por relevância         │     │
-│  │  sortGames()   → 6 critérios de ordenação       │     │
-│  │  GameCard[]  ──► onExpand ──► GameModal         │     │
-│  └─────────────────────────────────────────────────┘     │
-│                                                          │
-│  ┌─────────────────────────────────────────────────┐     │
-│  │                  Index (/?data=)                │     │
-│  │  Base64 url-safe → unzlibSync (fflate)          │     │
-│  │  JSON.parse → MapShortKeys → GameData           │     │
-│  │  gaming-rumble://btoa(JSON)                     │     │
-│  │       │                                         │     │
-│  │   ✅ App abriu          ❌ App ausente           │     │
-│  │   → "opened" state     → "fallback" state       │     │
-│  │   → auto-close         → botões manuais          │     │
-│  └─────────────────────────────────────────────────┘     │
-└──────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────┐
-│                     Vercel (Serverless)                  │
-│                                                          │
-│  Cron: 0 20 * * * (17h BRT)                             │
-│    └─► GET /api/cron                                     │
-│            │                                             │
-│            ▼                                             │
-│  GitHub raw (online_fix_games.json)                      │
-│            │                                             │
-│            ▼                                             │
-│  Vercel Blob ──► games.json (allowOverwrite)             │
-└──────────────────────────────────────────────────────────┘
-```
+- Recebe payload comprimido (zlib + Base64url) via parâmetro `?data=`
+- Decodifica e tenta abrir o app nativo via `gaming-rumble://`
+- Fallback visual após 1,5s quando o app não está instalado
+- Fecha a aba automaticamente 5s após o app abrir
+- Link `?download` em qualquer jogo gera o payload e dispara o protocolo
 
 ---
 
 ## 🔀 Rotas
 
 | Rota | Comportamento |
-|:---|:---|
-| `/` ou `/?data=<payload>` | Deep link — decodifica payload e abre o app |
-| `/page/:page` | Catálogo paginado (ex: `/page/3`) |
-| `/game/:slug` | Catálogo com modal do jogo aberto (ex: `/game/ark-nova`) |
-| `/game/:slug?download` | Redireciona internamente para `/?data=` com o payload do jogo |
+|---|---|
+| `/` | Redireciona para `/page/1` quando não há payload |
+| `/?data=<payload>` | Deep link — decodifica e abre o app |
+| `/page/:page` | Catálogo paginado |
+| `/game/:slug` | Catálogo com modal do jogo aberto |
+| `/game/:slug?download` | Codifica o jogo e redireciona para `/?data=` |
 
-> Páginas fora do intervalo são automaticamente redirecionadas para a última página disponível.
-
----
-
-## 🚀 Pré-requisitos
-
-| Dependência | Versão | Download |
-|:---:|:---:|:---:|
-| **[Node.js](https://nodejs.org/)** | `>= 18.0.0` | [📥 Baixar](https://nodejs.org/en/download) |
-| **[Bun](https://bun.sh/)** | `>= 1.0` | [📥 Baixar](https://bun.sh) |
-
-```bash
-node --version    # v18.x+
-bun --version     # 1.x+
-```
+> [!NOTE]
+> Páginas fora do intervalo válido são redirecionadas automaticamente para a última página disponível.
 
 ---
 
-## 📦 Instalação
+## 🧱 Arquitetura
 
-### 1️⃣ Clone o repositório
+```mermaid
+flowchart LR
+  A["🌐 Browser"] --> B["/page/:page\n/game/:slug"]
+  A --> C["/?data=payload"]
 
-```bash
-git clone https://github.com/zKauaFerreira/gr-link.git
+  B --> D["GameCatalog\n(useQuery → Vercel Blob)"]
+  D --> E["searchGames()\nranking de relevância"]
+  D --> F["sortGames()\n6 critérios"]
+  D --> G["GameCard[] → GameModal"]
+
+  C --> H["decodeData()\nBase64url → unzlibSync → JSON"]
+  H --> I["gaming-rumble://btoa(JSON)"]
+  I --> J["✅ App abriu\n→ auto-close 5s"]
+  I --> K["❌ App ausente\n→ fallback + magnet"]
+
+  VB[("Vercel Blob\ngames.json")] -->|fetch| D
+  CRON["⏰ Cron 17h BRT\n/api/cron"] -->|put allowOverwrite| VB
+  GH["GitHub Raw\nonline_fix_games.json"] -->|fetch| CRON
 ```
-
-### 2️⃣ Entre no diretório
-
-```bash
-cd gr-link
-```
-
-### 3️⃣ Instale as dependências
-
-```bash
-bun install
-```
-
----
-
-## 💻 Executando o Projeto
-
-```bash
-bun dev
-```
-
-> ⚡ O servidor será iniciado em `http://localhost:8080` com **Hot Module Replacement (HMR)** ativado.
-
----
-
-## 🧪 Build de Produção
-
-```bash
-# Build otimizado para produção
-bun run build
-
-# Preview do build
-bun run preview
-
-# Build em modo debug
-bun run build:dev
-```
-
-O conteúdo gerado ficará na pasta `dist/`, pronto para deploy na Vercel. 🌐
-
----
-
-## 🌍 Variáveis de Ambiente
-
-Configure as seguintes variáveis no painel da Vercel (**Settings → Environment Variables**):
-
-| Variável | Obrigatória | Descrição |
-|:---|:---:|:---|
-| `BLOB_READ_WRITE_TOKEN` | ✅ | Token de leitura/escrita do Vercel Blob (gerado em **Storage → seu blob → Settings**) |
-| `CRON_SECRET` | ✅ | Segredo arbitrário que a Vercel injeta automaticamente no header `Authorization` de cada invocação do cron |
-
-> ⚠️ Sem o `BLOB_READ_WRITE_TOKEN`, o cron irá falhar ao tentar sobrescrever o `games.json`.
-
----
-
-## ⏰ Cron Job — Atualização do Catálogo
-
-O catálogo é sincronizado automaticamente **todo dia às 17h (horário de Brasília)** pela função serverless `/api/cron`.
-
-**Fluxo:**
-
-```
-Vercel Scheduler (17h BRT / 20h UTC)
-    │
-    ▼
-GET /api/cron
-    │  Authorization: Bearer <CRON_SECRET>
-    ▼
-Fetch: github.com/.../online_fix_games.json
-    │
-    ▼
-Vercel Blob: put("games.json", body, { allowOverwrite: true })
-    │
-    ▼
-{ ok: true, updatedAt: "..." }
-```
-
-A função pode ser invocada manualmente também, bastando enviar a requisição com o header correto.
 
 ---
 
 ## 📡 Como Funciona o Deep Link
 
-### 🔗 URL de Acesso
+### URL de acesso
 
 ```
 https://seusite.com/?data=<zlib_base64url_encoded_json>
 ```
 
-O payload codificado contém informações do jogo comprimidas com **zlib** e transformadas para **URL-safe Base64**:
+O payload contém os dados do jogo comprimidos com zlib e codificados em Base64 URL-safe:
 
-| Chave Curta | Chave Completa | Exemplo |
-|:---:|:---:|:---|
+| Chave curta | Chave completa | Exemplo |
+|---|---|---|
 | `t` | `title` | `"Cyberpunk 2077"` |
 | `b` | `banner` | `"https://cdn.exemplo.com/banner.jpg"` |
 | `p` | `parts` | `3` |
 | `s` | `fileSize` | `"65.2 GB"` |
 | `m` | `magnet` | `"magnet:?xt=urn:btih:..."` |
 
-### 🔄 Fluxo Completo
+### Fluxo completo
 
 ```
-1. Usuário clica em /game/cyberpunk-2077?download
-2. GR-Link encontra o jogo no catálogo pelo slug
-3. Codifica os dados → zlib + Base64url → redireciona para /?data=...
-4. Decodifica e exibe banner, título, tamanho e nº de arquivos
+1. Usuário acessa /game/cyberpunk-2077?download
+2. GR-Link localiza o jogo pelo slug
+3. Codifica: JSON → zlib → Base64url → redireciona para /?data=...
+4. Exibe banner, título, tamanho e número de arquivos
 5. Tenta abrir gaming-rumble://base64_json
    │
-   ├─ ✅ App instalado → marca "opened" → fecha aba em 5s
-   └─ ❌ App ausente  → mostra fallback (botão "Abrir no App" + copiar Magnet)
+   ├─ ✅ App instalado → fecha aba em 5s
+   └─ ❌ App ausente  → botão "Abrir no App" + copiar Magnet
 ```
 
----
-
-## 🧩 Exemplo de Payload
-
 <details>
-<summary>🔨 <b>Como gerar um payload de teste</b></summary>
+<summary><strong>Como gerar um payload manualmente</strong></summary>
 
-Execute no **console do navegador** (F12):
+Execute no console do navegador (F12):
 
 ```javascript
-// Usando fflate (já incluso no projeto)
+// fflate já está incluso no projeto
 import { zlibSync } from 'fflate';
 
 const game = {
-  t: "Meu Jogo Incrível",
-  b: "https://via.placeholder.com/800x400?text=Banner",
+  t: "Meu Jogo",
+  b: "https://via.placeholder.com/800x400",
   p: 2,
   s: "45.5 GB",
-  m: "magnet:?xt=urn:btih:exemplo123456789"
+  m: "magnet:?xt=urn:btih:exemplo"
 };
 
 const bytes = new TextEncoder().encode(JSON.stringify(game));
@@ -305,145 +159,116 @@ console.log(`http://localhost:8080/?data=${urlSafe}`);
 
 ---
 
-## 🗂️ Estrutura do Projeto
+## ⏰ Cron de Atualização do Catálogo
 
+O catálogo é sincronizado automaticamente **todo dia às 17h (BRT / 20h UTC)** via função serverless na Vercel.
+
+```mermaid
+flowchart LR
+  SCHED["Vercel Scheduler\n0 20 * * *"] --> CRON["/api/cron\nAuthorization: Bearer CRON_SECRET"]
+  CRON --> GH["GitHub Raw\nonline_fix_games.json"]
+  GH --> BLOB["Vercel Blob\ngames.json\nallowOverwrite: true"]
+  BLOB --> OK["{ ok: true, updatedAt: ... }"]
 ```
-gr-link/
-├── 📁 api/
-│   └── cron.ts             # ⏰ Serverless function — atualiza o catálogo no Blob
-├── 📁 src/
-│   ├── 📁 assets/
-│   │   └── icon.png        # Ícone do Gaming Rumble
-│   ├── 📁 components/
-│   │   ├── GameCatalog.tsx # 📚 Catálogo completo (busca, filtros, paginação)
-│   │   ├── GameModal.tsx   # 🪟 Modal de detalhes do jogo
-│   │   └── ui/             # Componentes shadcn/ui (sonner, tooltip)
-│   ├── 📁 pages/
-│   │   ├── Index.tsx       # 🔗 Deep link — decode + protocolo + fallback
-│   │   └── NotFound.tsx    # ❌ Página 404
-│   ├── 📁 lib/
-│   │   ├── games.ts        # 🛠️ Tipos, slugify, sort, search, encode utilities
-│   │   ├── translations.json # 🌐 Traduções EN→PT para requisitos de sistema
-│   │   └── utils.ts        # Função cn() para classes Tailwind
-│   ├── App.tsx             # ⚙️ Router, QueryClient, Providers
-│   ├── index.css           # 🎨 Tailwind + variáveis CSS + animações custom
-│   ├── main.tsx            # 🚀 Entry point do React
-│   └── vite-env.d.ts       # Tipos do ambiente Vite
-├── 📁 public/              # Assets públicos (favicon, robots.txt)
-├── vercel.json             # ⚙️ Configuração Vercel — cron schedule
-├── index.html              # HTML raiz
-├── vite.config.ts          # ⚡ Configuração do Vite
-├── tailwind.config.ts      # 🎨 Configuração do Tailwind CSS
-├── tsconfig.json           # ⌨️ Referência TypeScript
-├── eslint.config.js        # 🔍 Configuração ESLint
-├── components.json         # 🧩 Configuração shadcn/ui
-└── package.json            # 📦 Dependências e scripts
+
+> [!NOTE]
+> O endpoint `/api/cron` pode ser chamado manualmente com o header `Authorization: Bearer <CRON_SECRET>` para forçar uma sincronização imediata.
+
+---
+
+## 🌍 Variáveis de Ambiente
+
+Configure no painel da Vercel em **Settings → Environment Variables**:
+
+| Variável | Obrigatória | Descrição |
+|---|---|---|
+| `BLOB_READ_WRITE_TOKEN` | ✅ | Token de leitura/escrita do Vercel Blob — gerado em **Storage → seu blob → Settings** |
+| `CRON_SECRET` | ✅ | Segredo arbitrário injetado automaticamente pela Vercel no header `Authorization` de cada invocação do cron |
+
+> [!WARNING]
+> Sem o `BLOB_READ_WRITE_TOKEN` o cron falha ao sobrescrever o `games.json`. Sem o `CRON_SECRET` a rota `/api/cron` retorna `401` para qualquer requisição.
+
+---
+
+## ⚙️ Configuração Local
+
+### Requisitos
+
+| Ferramenta | Versão |
+|---|---|
+| Node.js | `>= 18` |
+| Bun | `>= 1.0` |
+
+### Instalação
+
+```bash
+git clone https://github.com/zKauaFerreira/The-Gaming-Rumble.git
+cd The-Gaming-Rumble
+git checkout gr-link-site
+bun install
 ```
 
 ---
 
-## 🤝 Contribuindo
+## 🚀 Uso
 
-Contribuições são **super bem-vindas**! Siga os passos abaixo:
-
-### 1. 🔀 Faça um Fork do projeto
+### Desenvolvimento
 
 ```bash
-git clone https://github.com/zKauaFerreira/gr-link.git
-cd gr-link
-```
-
-### 2. 🌿 Crie uma branch para sua feature
-
-```bash
-git checkout -b feature/MinhaFeature
-```
-
-### 3. ✍️ Faça suas alterações
-
-```bash
-bun install
 bun dev
 ```
 
-### 4. ✅ Verifique se tudo funciona
+> Servidor em `http://localhost:8080` com HMR ativado.
+
+### Build de produção
 
 ```bash
-# Lint
-bun run lint
-
-# Type check
-bun run tsc --noEmit
-
-# Build
 bun run build
+bun run preview
 ```
 
-### 5. 💾 Commit suas mudanças
+### Verificação de tipos
 
 ```bash
-git add .
-git commit -m "feat: adiciona minha feature incrível"
+bun run tsc --noEmit
 ```
-
-### 6. 📤 Faça o Push e abra um PR
-
-```bash
-git push origin feature/MinhaFeature
-```
-
-> 🙏 Obrigado por contribuir! Toda PR é revisada com carinho.
-
-<details>
-<summary>📝 <b>Convenções de Commit</b></summary>
-
-| Tipo | Descrição | Exemplo |
-|:---:|---|:---|
-| `feat` | Nova funcionalidade | `feat: adiciona filtro por gênero` |
-| `fix` | Correção de bug | `fix: decode falhando com payload vazio` |
-| `style` | Mudanças visuais | `style: melhora animação do modal` |
-| `refactor` | Refatoração | `refactor: simplifica fluxo de fallback` |
-| `docs` | Documentação | `docs: atualiza README com variáveis de ambiente` |
-| `chore` | Manutenção | `chore: atualiza dependências` |
-
-</details>
 
 ---
 
-## 📄 Licença
+## 📁 Estrutura do Projeto
 
-<div align="center">
-
-### 📜 [MIT License](LICENSE)
-
-**GR-Link — Catálogo e ponte inteligente para o Gaming Rumble App**
-
-Copyright © 2025 — Todos os direitos reservados.
-
-> ⚖️ Este projeto é distribuído sob a licença MIT, o que significa que você pode:
->
-> - ✅ Usar comercialmente
-> - ✅ Modificar
-> - ✅ Distribuir
-> - ✅ Usar privadamente
->
-> ⚠️ **Sem garantias** — use por sua conta e risco.
-
-</div>
+```txt
+gr-link/
+├── api/
+│   └── cron.ts                  # Serverless function — sincroniza games.json no Vercel Blob
+├── src/
+│   ├── assets/
+│   │   └── icon.png
+│   ├── components/
+│   │   ├── GameCatalog.tsx       # Catálogo completo (busca, filtros, paginação, modal)
+│   │   ├── GameModal.tsx         # Modal de detalhes do jogo
+│   │   └── ui/                  # Componentes shadcn/ui
+│   ├── pages/
+│   │   ├── Index.tsx             # Deep link — decode + protocolo + fallback
+│   │   └── NotFound.tsx
+│   ├── lib/
+│   │   ├── games.ts              # Tipos, slugify, sort, search, encode
+│   │   ├── translations.json     # Traduções EN→PT para requisitos de sistema
+│   │   └── utils.ts
+│   ├── App.tsx
+│   ├── index.css
+│   └── main.tsx
+├── public/
+├── vercel.json                   # Cron schedule + rewrites SPA
+├── vite.config.ts
+├── tailwind.config.ts
+└── package.json
+```
 
 ---
 
-<div align="center">
+## 📜 Licença
 
-Feito com 💙 e muito ☕ pelo time **Gaming Rumble**
+Este repositório é disponibilizado apenas para fins educacionais e de pesquisa.
 
-[![React](https://img.shields.io/badge/React-%2320232a.svg?style=flat&logo=react&logoColor=%2361DAFB)](#)
-[![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=flat&logo=typescript&logoColor=white)](#)
-[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-%2338B2AC.svg?style=flat&logo=tailwindcss&logoColor=white)](#)
-[![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-000000?style=flat&logo=shadcnui&logoColor=white)](#)
-[![Vite](https://img.shields.io/badge/Vite-%23646CFF.svg?style=flat&logo=vite&logoColor=white)](#)
-[![Vercel](https://img.shields.io/badge/Vercel-%23000000.svg?style=flat&logo=vercel&logoColor=white)](#)
-
-⭐ **Deixe uma star se o projeto te ajudou!** ⭐
-
-</div>
+Veja a licença completa e o aviso legal em [LICENSE](https://github.com/zKauaFerreira/The-Gaming-Rumble/blob/main/LICENSE).
