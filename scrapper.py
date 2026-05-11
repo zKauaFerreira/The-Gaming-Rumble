@@ -1887,49 +1887,60 @@ class OnlineFixScraper:
             page_dir = os.path.join(TORRENT_DIR, f"batch_{p}")
             os.makedirs(page_dir, exist_ok=True)
 
-            torrent_url, webdav_date, folder_url, torrent_meta = self.find_torrent_robust(title)
-            if not torrent_url:
+            # --- Torrent (falha não descarta o jogo se houver hosters) ---
+            torrent_ok = False
+            metadata = None
+            torrent_link = None
+            webdav_date = None
+            torrent_reason = "NO_TORRENT_LINK"
+
+            torrent_url, webdav_date_raw, folder_url, torrent_meta = self.find_torrent_robust(title)
+            if torrent_url:
+                webdav_date = webdav_date_raw
+                t_resp = None
+                for t_attempt in range(3):
+                    try:
+                        t_resp = self.session.get(
+                            torrent_url,
+                            headers={**HEADERS, "referer": folder_url, "upgrade-insecure-requests": "1"},
+                            timeout=(10, 30)
+                        )
+                        if t_resp.status_code == 429:
+                            time.sleep(10)
+                            continue
+                        if t_resp.status_code == 200:
+                            break
+                    except Exception:
+                        time.sleep(2)
+
+                if t_resp and t_resp.status_code == 200:
+                    metadata = self.get_torrent_metadata(t_resp.content)
+                    if metadata:
+                        filename = os.path.basename(torrent_url)
+                        with open(os.path.join(page_dir, filename), 'wb') as f:
+                            f.write(t_resp.content)
+                        torrent_link = (
+                            f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/{page_dir}/{filename}"
+                            if GITHUB_REPO else os.path.join(page_dir, filename)
+                        )
+                        torrent_link = self._normalize_torrent_link(torrent_link)
+                        torrent_ok = True
+                    else:
+                        torrent_reason = "BAD_TORRENT_METADATA"
+                else:
+                    torrent_reason = str(getattr(t_resp, 'status_code', 'TORRENT_DOWNLOAD_ERR'))
+            else:
+                torrent_reason = torrent_meta.get("reason", "NO_TORRENT_LINK")
+
+            # --- Hosters (sempre buscado, independente do torrent) ---
+            hoster_links = self.fetch_hoster_links(title)
+            hoster_count = len(hoster_links) if hoster_links else 0
+
+            # Descarta só se não há nenhum método de download
+            if not torrent_ok and not hoster_links:
                 latency_ms = int((time.time() - started_at) * 1000)
-                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, torrent_meta.get("reason", "NO_TORRENT_LINK"), run_state=run_state))
+                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, torrent_reason, run_state=run_state, hoster_count=hoster_count))
                 return None
-
-            t_resp = None
-            for t_attempt in range(3):
-                try:
-                    t_resp = self.session.get(
-                        torrent_url,
-                        headers={**HEADERS, "referer": folder_url, "upgrade-insecure-requests": "1"},
-                        timeout=(10, 30)
-                    )
-                    if t_resp.status_code == 429:
-                        time.sleep(10)
-                        continue
-                    if t_resp.status_code == 200:
-                        break
-                except Exception:
-                    time.sleep(2)
-
-            if not t_resp or t_resp.status_code != 200:
-                latency_ms = int((time.time() - started_at) * 1000)
-                reason = getattr(t_resp, 'status_code', 'TORRENT_DOWNLOAD_ERR')
-                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, str(reason), run_state=run_state))
-                return None
-
-            metadata = self.get_torrent_metadata(t_resp.content)
-            if not metadata:
-                latency_ms = int((time.time() - started_at) * 1000)
-                print(self._format_game_log_line(current_idx, total_games, title, p, False, False, latency_ms, "BAD_TORRENT_METADATA", run_state=run_state))
-                return None
-
-            filename = os.path.basename(torrent_url)
-            with open(os.path.join(page_dir, filename), 'wb') as f:
-                f.write(t_resp.content)
-
-            torrent_link = (
-                f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/{page_dir}/{filename}"
-                if GITHUB_REPO else os.path.join(page_dir, filename)
-            )
-            torrent_link = self._normalize_torrent_link(torrent_link)
 
             current_scraped_game = {
                 "title": title,
@@ -1947,28 +1958,29 @@ class OnlineFixScraper:
             steam, _ = self.get_steam_data(title, verbose=False)
             steam_ok = bool(steam and not steam.get('not_found'))
 
-            hoster_links = self.fetch_hoster_links(title)
-            hoster_count = len(hoster_links) if hoster_links else 0
-
             latency_ms = int((time.time() - started_at) * 1000)
-            reason = "OK" if steam_ok else steam.get('reason', 'NO_STEAM_MATCH')
+            reason = torrent_reason if not torrent_ok else ("OK" if steam_ok else steam.get('reason', 'NO_STEAM_MATCH'))
             match_via = steam.get('match_via') if steam_ok and isinstance(steam, dict) else None
-            print(self._format_game_log_line(current_idx, total_games, title, p, True, steam_ok, latency_ms, str(reason), match_via, run_state, hoster_count))
+            print(self._format_game_log_line(current_idx, total_games, title, p, torrent_ok, steam_ok, latency_ms, str(reason), match_via, run_state, hoster_count))
 
-            return {
+            result = {
                 **current_scraped_game,
-                "unique_hash": metadata["unique_hash"],
-                "fileSize": metadata["total_size"],
-                "magnet": metadata["magnet"],
-                "torrent_file": torrent_link,
-                "created_at": metadata["created_at"],
-                "webdav_updated_at": webdav_date,
-                "files": metadata["files"],
-                "comment": metadata["comment"],
                 "scraped_at": self._format_now(),
                 "steam": steam,
                 "hoster_links": hoster_links,
             }
+            if torrent_ok and metadata:
+                result.update({
+                    "unique_hash": metadata["unique_hash"],
+                    "fileSize": metadata["total_size"],
+                    "magnet": metadata["magnet"],
+                    "torrent_file": torrent_link,
+                    "created_at": metadata["created_at"],
+                    "webdav_updated_at": webdav_date,
+                    "files": metadata["files"],
+                    "comment": metadata["comment"],
+                })
+            return result
 
         from concurrent.futures import ThreadPoolExecutor, as_completed
         results_data = []
