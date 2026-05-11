@@ -557,8 +557,6 @@ class OnlineFixScraper:
 
     def _set_webdav_cookies(self):
         for cookie in list(self.session.cookies):
-            if 'uploads.online-fix.me' in (cookie.domain or ''):
-                continue  # já está no domínio certo, não sobrescreve
             self.session.cookies.set(cookie.name, cookie.value, domain='uploads.online-fix.me')
 
     def _warmup_webdav(self):
@@ -1802,10 +1800,6 @@ class OnlineFixScraper:
 
     def run(self, pages=None, workers=6, start_page=1):
         self.login()
-        self._set_webdav_cookies()
-        webdav_cookie_names = [c.name for c in self.session.cookies if 'uploads.online-fix.me' in (c.domain or '')]
-        print(f"Cookies para WebDAV: {webdav_cookie_names}")
-        self._warmup_webdav()
 
         max_page = self.get_max_page()
         limit_page = pages if pages else max_page
