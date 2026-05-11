@@ -12,20 +12,17 @@
   "pages_scraped_target": 90,
   "pages_present_in_json": 89,
   "last_page_in_json": 89,
-  "new_games_found_this_run": 136,
-  "new_games_added_to_json_this_run": 2,
-  "latest_run_new_game_names": [
-    "Golf Gambit",
-    "Outbound"
-  ],
+  "new_games_found_this_run": 134,
+  "new_games_added_to_json_this_run": 0,
+  "latest_run_new_game_names": [],
   "updated_games_this_run": 0,
   "latest_run_updated_game_names": [],
-  "processed_games_this_run": 2,
+  "processed_games_this_run": 0,
   "torrent_files_total": 1726,
   "json_entries_with_torrent": 1726,
   "last_scrape_at": "2026-05-11 16:42:01",
   "last_scrape_at_display": "11/05/2026",
   "last_game_update": "2026-05-11T20:25:58+03:00",
-  "generated_at": "2026-05-11 16:43:40",
+  "generated_at": "2026-05-11 17:50:59",
   "generated_at_display": "11/05/2026"
 }
