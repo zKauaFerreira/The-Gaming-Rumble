@@ -1590,8 +1590,7 @@ class OnlineFixScraper:
             try:
                 for attempt in range(4):
                     time.sleep(0.1)
-                    proxy = self._get_next_proxy()
-                    resp = self.session.get(direct_url, headers=WEBDAV_HEADERS, timeout=(5, 10), proxies=proxy)
+                    resp = self.session.get(direct_url, headers=WEBDAV_HEADERS, timeout=(5, 10))
 
                     if resp.status_code == 429:
                         wait = 15 * (attempt + 1)
@@ -1637,8 +1636,7 @@ class OnlineFixScraper:
             try:
                 for attempt in range(5):
                     time.sleep(0.2)
-                    proxy = self._get_next_proxy()
-                    resp = self.session.get(folder_url, headers=WEBDAV_HEADERS, timeout=(10, 20), proxies=proxy)
+                    resp = self.session.get(folder_url, headers=WEBDAV_HEADERS, timeout=(10, 20))
 
                     if resp.status_code == 429:
                         wait = 60 * (attempt + 1)
@@ -1914,12 +1912,10 @@ class OnlineFixScraper:
                 t_resp = None
                 for t_attempt in range(4):
                     try:
-                        t_proxy = self._get_next_proxy()
                         t_resp = self.session.get(
                             torrent_url,
                             headers={**HEADERS, "referer": folder_url, "upgrade-insecure-requests": "1"},
                             timeout=(10, 30),
-                            proxies=t_proxy,
                         )
                         if t_resp.status_code == 429:
                             time.sleep(10)
