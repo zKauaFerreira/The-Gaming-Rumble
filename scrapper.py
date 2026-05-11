@@ -1588,9 +1588,10 @@ class OnlineFixScraper:
             time.sleep(random.uniform(0.2, 0.5))
             direct_url = f"{WEBDAV_ROOT}{direct_var}"
             try:
-                for attempt in range(3):  # Menos tentativas para acesso direto
+                for attempt in range(4):
                     time.sleep(0.1)
-                    resp = self.session.get(direct_url, headers=WEBDAV_HEADERS, timeout=(5, 10))
+                    proxy = self._get_next_proxy()
+                    resp = self.session.get(direct_url, headers=WEBDAV_HEADERS, timeout=(5, 10), proxies=proxy)
 
                     if resp.status_code == 429:
                         wait = 15 * (attempt + 1)
@@ -1598,53 +1599,60 @@ class OnlineFixScraper:
                         continue
 
                     if resp.status_code == 200:
-                        # Verifica se é realmente um arquivo .torrent
                         content_type = resp.headers.get('content-type', '').lower()
                         content_disposition = resp.headers.get('content-disposition', '').lower()
                         if 'application/x-bittorrent' in content_type or '.torrent' in content_disposition or direct_var.endswith('.torrent'):
-                            # Extrai data de criação do cabeçalho se disponível
                             webdav_date = resp.headers.get('last-modified', 'Unknown')
                             return direct_url, webdav_date, direct_url, {"reason": "OK", "status_code": 200}
-                    elif resp.status_code == 401 or resp.status_code == 404:
+                        break
+                    elif resp.status_code == 404:
+                        last_reason = {"reason": "404", "status_code": 404}
+                        break  # Arquivo não existe, tentar próxima variação
+                    elif resp.status_code == 401:
+                        last_reason = {"reason": "401", "status_code": 401}
+                        time.sleep(1 * (attempt + 1))
+                        continue  # Tenta com outro proxy
+                    elif resp.status_code in (402, 403):
                         last_reason = {"reason": str(resp.status_code), "status_code": resp.status_code}
-                        break  # Arquivo não existe, tentar próximo
-                    elif resp.status_code == 402:  # Payment Required - problema com proxy
-                        last_reason = {"reason": str(resp.status_code), "status_code": resp.status_code}
-                        break  # Não tentar mais variações desse tipo
-                    elif resp.status_code == 403:  # Forbidden
-                        last_reason = {"reason": str(resp.status_code), "status_code": resp.status_code}
-                        break  # Não tentar mais variações desse tipo
+                        continue  # Tenta com outro proxy
                     else:
-                        # Outros erros, tentar novamente
-                        if attempt < 2:  # Ainda tem tentativas
+                        if attempt < 3:
                             time.sleep(1 * (attempt + 1))
                         continue
                 break
             except Exception as e:
                 last_reason = {"reason": type(e).__name__, "status_code": "ERR"}
                 if "Payment Required" in str(e) or "402" in str(e):
-                    continue  # Continuar para próxima variação em vez de parar
+                    continue
 
         # Se acesso direto falhar, tenta o método original de acesso ao diretório
         variations = [quote(variant_name, safe='') for variant_name in name_variants]
 
         for var in variations:
-            # Delay entre tentativas de pasta no WebDAV
-            time.sleep(random.uniform(0.5, 1.0))  # Aumentei o delay inicial
+            time.sleep(random.uniform(0.5, 1.0))
             folder_url = f"{WEBDAV_ROOT}{var}/"
             try:
-                for attempt in range(5):  # Reduzi número de tentativas para evitar longos waits
-                    time.sleep(0.2)  # Aumentei o delay entre tentativas
-                    resp = self.session.get(folder_url, headers=WEBDAV_HEADERS, timeout=(10, 20))
+                for attempt in range(5):
+                    time.sleep(0.2)
+                    proxy = self._get_next_proxy()
+                    resp = self.session.get(folder_url, headers=WEBDAV_HEADERS, timeout=(10, 20), proxies=proxy)
 
                     if resp.status_code == 429:
-                        wait = 60 * (attempt + 1)  # Aumentei o tempo de espera
+                        wait = 60 * (attempt + 1)
                         time.sleep(wait)
                         continue
 
-                    if resp.status_code in [401, 403, 404]:
+                    if resp.status_code == 404:
+                        last_reason = {"reason": "404", "status_code": 404}
+                        break  # Pasta não existe, tentar próxima variação
+                    if resp.status_code == 401:
+                        last_reason = {"reason": "401", "status_code": 401}
+                        time.sleep(2 * (attempt + 1))
+                        continue  # Tenta com outro proxy
+                    if resp.status_code in (402, 403):
                         last_reason = {"reason": str(resp.status_code), "status_code": resp.status_code}
-                        break  # Não tentar mais variações com este padrão
+                        time.sleep(1 * (attempt + 1))
+                        continue  # Tenta com outro proxy
                     if resp.status_code != 200:
                         last_reason = {"reason": str(resp.status_code), "status_code": resp.status_code}
                         break
@@ -1898,16 +1906,21 @@ class OnlineFixScraper:
             if torrent_url:
                 webdav_date = webdav_date_raw
                 t_resp = None
-                for t_attempt in range(3):
+                for t_attempt in range(4):
                     try:
+                        t_proxy = self._get_next_proxy()
                         t_resp = self.session.get(
                             torrent_url,
                             headers={**HEADERS, "referer": folder_url, "upgrade-insecure-requests": "1"},
-                            timeout=(10, 30)
+                            timeout=(10, 30),
+                            proxies=t_proxy,
                         )
                         if t_resp.status_code == 429:
                             time.sleep(10)
                             continue
+                        if t_resp.status_code == 401:
+                            time.sleep(2 * (t_attempt + 1))
+                            continue  # Tenta com outro proxy
                         if t_resp.status_code == 200:
                             break
                     except Exception:
