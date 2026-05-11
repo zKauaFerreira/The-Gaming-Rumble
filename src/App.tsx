@@ -3,10 +3,12 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
+import { GameCatalog } from "./components/GameCatalog.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import TestCron from "./pages/TestCron.tsx";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 10 * 60 * 1000 } },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -15,7 +17,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/test-cron" element={<TestCron />} />
+          <Route path="/page/:page" element={<GameCatalog />} />
+          <Route path="/game/:slug" element={<GameCatalog />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
