@@ -2152,14 +2152,28 @@ class OnlineFixScraper:
 
             if hosters_ok:
                 fase3_filled = 0
-                for item in games_missing_hosters:
+                consecutive_slow = 0
+                total_missing = len(games_missing_hosters)
+                for i, item in enumerate(games_missing_hosters, 1):
                     title = item.get('title', '')
+                    t0 = time.time()
                     links = self.fetch_hoster_links(title)
+                    elapsed = time.time() - t0
                     if links:
                         item['hoster_links'] = links
                         print(f"  ✅ Hosters: {title} ({len(links)} providers)")
                         fase3_filled += 1
-                print(f"FASE 3: {fase3_filled}/{len(games_missing_hosters)} jogos com providers preenchidos.")
+                        consecutive_slow = 0
+                    elif elapsed >= 9:
+                        consecutive_slow += 1
+                        if consecutive_slow >= 5:
+                            print(f"FASE 3: servidor travando requisições — abortando após {i}/{total_missing} jogos.")
+                            break
+                    else:
+                        consecutive_slow = 0
+                    if i % 100 == 0:
+                        print(f"FASE 3: [{i}/{total_missing}] {fase3_filled} providers encontrados...")
+                print(f"FASE 3: {fase3_filled}/{total_missing} jogos com providers preenchidos.")
 
         # Salvar
         all_data.sort(key=lambda x: x.get('title', ''))
