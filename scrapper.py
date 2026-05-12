@@ -1515,26 +1515,31 @@ class OnlineFixScraper:
 
     def fetch_hoster_links(self, title):
         """Busca todos os links de download de todos os hosters para um jogo."""
+        # Copia cookies de login para o domínio hosters (mesmo padrão do WebDAV)
+        for cookie in list(self.session.cookies):
+            self.session.cookies.set(cookie.name, cookie.value, domain='hosters.online-fix.me')
+
         encoded_title = quote(title, safe='')
         url = f"{HOSTERS_BASE_URL}{encoded_title}"
+        first_bad_status = None
         for attempt in range(4):
-            proxy = self._get_next_proxy()
             try:
                 time.sleep(random.uniform(0.2, 0.6) * (attempt + 1))
-                resp = self.session.get(url, timeout=15, proxies=proxy)
+                # Sem proxy — hosters server rejeita requisições via proxy (igual ao WebDAV)
+                resp = self.session.get(url, timeout=15, proxies=None)
                 if resp.status_code == 404:
                     return None  # jogo não existe no hosters, desiste
                 if resp.status_code in (429, 503):
                     time.sleep(10 * (attempt + 1))
                     continue
                 if resp.status_code != 200:
-                    # 403 = Cloudflare bloqueou, tenta com outro proxy
+                    if first_bad_status is None:
+                        first_bad_status = resp.status_code
                     time.sleep(3 * (attempt + 1))
                     continue
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 options = soup.select('.option')
                 if not options:
-                    # página sem .option = CF managed challenge sem conteúdo, tenta de novo
                     time.sleep(2 * (attempt + 1))
                     continue
                 hosters = {}
@@ -2123,21 +2128,26 @@ class OnlineFixScraper:
         if games_missing_hosters:
             print(f"\nFASE 3: Buscando providers para {len(games_missing_hosters)} jogos sem hoster_links...")
 
+            fase3_filled = 0
+
             def fetch_hoster_for_existing(item):
                 title = item.get('title', '')
                 links = self.fetch_hoster_links(title)
                 if links:
                     item['hoster_links'] = links
-                    print(f"  ✅ Hosters preenchidos: {title} ({len(links)} providers)")
-                return item
+                    print(f"  ✅ Hosters: {title} ({len(links)} providers)")
+                return links is not None
 
             with ThreadPoolExecutor(max_workers=4) as executor:
                 futures = {executor.submit(fetch_hoster_for_existing, item): item for item in games_missing_hosters}
                 for future in as_completed(futures):
                     try:
-                        future.result()
+                        if future.result():
+                            fase3_filled += 1
                     except Exception:
                         pass
+
+            print(f"FASE 3: {fase3_filled}/{len(games_missing_hosters)} jogos com providers preenchidos.")
 
         # Salvar
         all_data.sort(key=lambda x: x.get('title', ''))
