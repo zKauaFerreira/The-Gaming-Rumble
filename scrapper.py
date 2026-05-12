@@ -2115,6 +2115,30 @@ class OnlineFixScraper:
                                 break
                         existing_map[title] = updated_existing
 
+        # ====== FASE 3: Preencher hoster_links em jogos sem providers ======
+        games_missing_hosters = [
+            item for item in all_data
+            if item.get('torrent_file') and not item.get('hoster_links')
+        ]
+        if games_missing_hosters:
+            print(f"\nFASE 3: Buscando providers para {len(games_missing_hosters)} jogos sem hoster_links...")
+
+            def fetch_hoster_for_existing(item):
+                title = item.get('title', '')
+                links = self.fetch_hoster_links(title)
+                if links:
+                    item['hoster_links'] = links
+                    print(f"  ✅ Hosters preenchidos: {title} ({len(links)} providers)")
+                return item
+
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = {executor.submit(fetch_hoster_for_existing, item): item for item in games_missing_hosters}
+                for future in as_completed(futures):
+                    try:
+                        future.result()
+                    except Exception:
+                        pass
+
         # Salvar
         all_data.sort(key=lambda x: x.get('title', ''))
         total = len(all_data)
