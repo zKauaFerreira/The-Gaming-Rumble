@@ -13,9 +13,12 @@ import { GameModal } from "./GameModal";
 import {
   type Game,
   type SortId,
+  type GameStats,
   GAMES_API,
+  STATS_API,
   toSlug,
   findBySlug,
+  findByHash,
   sortGames,
   searchGames,
   encodeGameForDataUrl,
@@ -26,7 +29,7 @@ import {
 export type { Game };
 export type { GameFile } from "@/lib/games";
 
-const GAMES_PER_PAGE = 24;
+const GAMES_PER_PAGE = 32;
 
 type SortOption = { id: SortId; label: string; Icon: React.FC<{ className?: string }> };
 
@@ -51,23 +54,43 @@ export function GameCatalog() {
     const p = pageParam ? parseInt(pageParam) : 1;
     return isNaN(p) || p < 1 ? 1 : p;
   });
-  const [sort, setSort] = useState<SortId | null>(null);
+  const [sort, setSort] = useState<SortId | null>("newest");
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [headerH, setHeaderH] = useState(56);
+  const [footerHidden, setFooterHidden] = useState(false);
 
   const headerRef = useRef<HTMLElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const paginationRef = useRef<HTMLDivElement>(null);
+
+  /* ── Fetch stats if available ── */
+  const { data: stats } = useQuery({
+    queryKey: ["stats"],
+    queryFn: async () => {
+      if (!STATS_API) return null;
+      const r = await fetch(`${STATS_API}?t=${Date.now()}`, { cache: "no-store" });
+      if (!r.ok) return null;
+      return (await r.json()) as GameStats;
+    },
+    enabled: !!STATS_API,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
   /* ── Fetch games (cached via QueryClient) ── */
   const { data, isLoading, isError } = useQuery({
     queryKey: ["games"],
     queryFn: async () => {
-      const r = await fetch(GAMES_API);
-      return r.json() as Promise<{ downloads: Game[] }>;
+      if (!GAMES_API) throw new Error("GAMES_API missing");
+      const r = await fetch(`${GAMES_API}?t=${Date.now()}`, { cache: "no-store" });
+      if (!r.ok) throw new Error("Failed to fetch games");
+      const json = await r.json();
+      return json as { downloads: Game[] };
     },
+    enabled: !!GAMES_API,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
   const games = useMemo(() => data?.downloads ?? [], [data]);
 
@@ -95,15 +118,24 @@ export function GameCatalog() {
   /* ── Handle /game/:slug?download → encode & redirect to deep-link ── */
   useEffect(() => {
     if (!isDownload || !slug || games.length === 0) return;
-    const game = findBySlug(games, slug);
+    const game = findByHash(games, slug) || findBySlug(games, slug);
     if (game) navigate(`/?data=${encodeGameForDataUrl(game)}`, { replace: true });
     else navigate("/page/1", { replace: true });
   }, [isDownload, slug, games, navigate]);
 
-  /* ── Auto-open modal for /game/:slug ── */
+  /* ── Redirect from Hash to Slug for cleaner URLs (if not downloading) ── */
+  useEffect(() => {
+    if (isDownload || !slug || games.length === 0) return;
+    const gameByHash = findByHash(games, slug);
+    if (gameByHash && slug !== toSlug(gameByHash.title)) {
+      navigate(`/game/${toSlug(gameByHash.title)}`, { replace: true });
+    }
+  }, [slug, isDownload, games, navigate]);
+
+  /* ── Auto-open modal for /game/:slug (supports slug or hash) ── */
   useEffect(() => {
     if (!slug || isDownload || games.length === 0) return;
-    const game = findBySlug(games, slug);
+    const game = findByHash(games, slug) || findBySlug(games, slug);
     setSelectedGame(game ?? null);
   }, [slug, isDownload, games]);
 
@@ -133,6 +165,26 @@ export function GameCatalog() {
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
   }, [searchOpen]);
+
+  /* ── Hide footer when overlapping pagination ── */
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!paginationRef.current) {
+        setFooterHidden(false);
+        return;
+      }
+      const rect = paginationRef.current.getBoundingClientRect();
+      // rect.top is the distance from viewport top to pagination top
+      // If the top of pagination is near the bottom of viewport, hide footer
+      const threshold = window.innerHeight - 60; 
+      setFooterHidden(rect.top < threshold);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    // Run once on mount to set initial state
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [paginated.length]); // Re-run if content changes
 
   /* ── Actions ── */
   const handleSearch = (v: string) => {
@@ -178,6 +230,31 @@ export function GameCatalog() {
   }, [page, totalPages]);
 
   /* ── Render states ── */
+  if (!GAMES_API) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center max-w-md animate-fade-in-up">
+          <div className="w-16 h-16 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold mb-3">Configuração Necessária</h1>
+          <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
+            A variável de ambiente <code className="bg-secondary px-1.5 py-0.5 rounded text-foreground font-mono">VITE_GAMES_API_URL</code> é obrigatória para o funcionamento do site.
+            <br /><br />
+            A variável <code className="bg-secondary px-1.5 py-0.5 rounded text-foreground font-mono">VITE_STATS_API_URL</code> é opcional e serve para exibir estatísticas globais.
+          </p>
+          <div className="bg-card border border-border p-4 rounded-xl text-left font-mono text-[11px] text-muted-foreground">
+            # Exemplo .env<br />
+            VITE_GAMES_API_URL=https://.../games.json<br />
+            VITE_STATS_API_URL=https://.../stats.json
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading || (isDownload && slug)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -227,16 +304,22 @@ export function GameCatalog() {
                 scrolled ? "w-7 h-7" : "w-8 h-8"
               }`}
             />
-            <span className="text-sm font-semibold leading-none whitespace-nowrap">
-              Gaming Rumble{" "}
-              <span className="text-muted-foreground font-normal">
-                ({games.length.toLocaleString()})
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold leading-none whitespace-nowrap">
+                Gaming Rumble
               </span>
-            </span>
+              <span className="text-[10px] text-muted-foreground font-normal mt-0.5">
+                {stats ? (
+                  <>{stats.total_games.toLocaleString()} jogos | {stats.games_with_providers} diretos</>
+                ) : (
+                  <>{games.length.toLocaleString()} jogos</>
+                )}
+              </span>
+            </div>
           </div>
 
           {/* Sort pills — horizontally scrollable, centered */}
-          <div className="flex items-center justify-center gap-1.5 overflow-x-auto scrollbar-none flex-1 min-w-0 py-0.5">
+          <div className="flex items-center justify-center gap-1.5 overflow-x-auto scrollbar-none flex-1 min-w-0 py-0.5 px-2">
             {SORT_OPTIONS.map(({ id, label, Icon }) => (
               <SortPill
                 key={id}
@@ -297,7 +380,7 @@ export function GameCatalog() {
       />
 
       {/* ── Content ── */}
-      <main className="p-4 md:p-8 max-w-screen-2xl mx-auto">
+      <main className="p-4 md:p-8 w-full pb-24">
         {paginated.length === 0 ? (
           <div className="text-center py-24 text-muted-foreground animate-fade-in-up">
             Nenhum jogo encontrado.
@@ -305,22 +388,27 @@ export function GameCatalog() {
         ) : (
           <div
             key={`${page}-${sort ?? "none"}-${search}`}
-            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-4"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 3xl:grid-cols-10 gap-3 md:gap-4"
           >
-            {paginated.map((game, i) => (
-              <GameCard
-                key={game.unique_hash || game.title}
-                game={game}
-                index={i}
-                onExpand={() => openModal(game)}
-              />
-            ))}
+            {paginated.map((game, i) => {
+              const isNew = stats?.latest_run_new_game_names?.includes(game.title);
+              const isUpd = stats?.latest_run_updated_game_names?.includes(game.title);
+              return (
+                <GameCard
+                  key={game.unique_hash || game.title}
+                  game={game}
+                  index={i}
+                  status={isNew ? "new" : isUpd ? "upd" : undefined}
+                  onExpand={() => openModal(game)}
+                />
+              );
+            })}
           </div>
         )}
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-10">
+          <div ref={paginationRef} className="flex flex-wrap items-center justify-center gap-2 mt-10">
             <button
               onClick={() => changePage(Math.max(1, page - 1))}
               disabled={page === 1}
@@ -382,6 +470,39 @@ export function GameCatalog() {
         )}
       </main>
 
+      {/* ── Fixed Status Footer ── */}
+      {stats && (
+        <footer className={`fixed bottom-0 left-0 right-0 z-40 px-3 pb-3 transition-all duration-500 ease-in-out ${
+          footerHidden ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+        }`}>
+          <div className="flex items-center justify-between px-3 py-2 bg-card/90 backdrop-blur-md border border-border rounded-2xl shadow-2xl shadow-black/50 text-[10px] text-muted-foreground">
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                <span className="font-medium uppercase tracking-wider text-emerald-500/80">Sistema Online</span>
+              </div>
+              <div className="hidden md:flex items-center gap-3 border-l border-border pl-4">
+                <span>Torrents: <span className="text-foreground/70">{stats.torrent_files_total}</span></span>
+                <span>Steam Sync: <span className="text-foreground/70">{stats.steam_with_metadata}</span></span>
+              </div>
+            </div>
+            
+            <div className="hidden sm:block absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
+              Última Sincronização: <span className="text-foreground/70">{stats.last_scrape_at_display}</span>
+              <span className="mx-2 opacity-30">|</span>
+              Build: <span className="text-foreground/70">{stats.generated_at_display}</span>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <span>Saúde do Banco: <span className="text-foreground/70">{stats.match_rate}%</span></span>
+              <div className="w-12 h-1 bg-secondary rounded-full overflow-hidden hidden md:block">
+                <div className="h-full bg-primary/60" style={{ width: `${stats.match_rate}%` }} />
+              </div>
+            </div>
+          </div>
+        </footer>
+      )}
+
       {selectedGame && (
         <GameModal game={selectedGame} onClose={closeModal} />
       )}
@@ -422,10 +543,12 @@ function SortPill({
 function GameCard({
   game,
   index,
+  status,
   onExpand,
 }: {
   game: Game;
   index: number;
+  status?: "new" | "upd";
   onExpand: () => void;
 }) {
   const [imgError, setImgError] = useState(false);
@@ -459,6 +582,16 @@ function GameCard({
             </span>
           </div>
         )}
+        
+        {/* Status Badge */}
+        {status && (
+          <div className={`absolute top-0 left-0 px-1.5 py-0.5 text-[8px] font-bold text-white uppercase rounded-br-lg shadow-lg z-10 ${
+            status === "new" ? "bg-emerald-500/90" : "bg-blue-500/90"
+          }`}>
+            {status === "new" ? "Novo" : "Upd"}
+          </div>
+        )}
+
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
         {/* Expand hint icon */}
         <div className="absolute top-1.5 right-1.5 w-7 h-7 rounded-lg bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">

@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
+import ShortLink from "./pages/ShortLink.tsx";
 import { GameCatalog } from "./components/GameCatalog.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -17,6 +18,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/d/:id" element={<ShortLink />} />
           <Route path="/page/:page" element={<GameCatalog />} />
           <Route path="/game/:slug" element={<GameCatalog />} />
           <Route path="*" element={<NotFound />} />

@@ -1,11 +1,34 @@
 import { zlibSync } from "fflate";
 
-export const GAMES_API =
-  "https://mkuqgpwafiakxxi1.public.blob.vercel-storage.com/games.json";
+export const GAMES_API = import.meta.env.VITE_GAMES_API_URL;
+export const STATS_API = import.meta.env.VITE_STATS_API_URL;
+
+export interface GameStats {
+  total_games: number;
+  online_fix_total: number;
+  steam_with_metadata: number;
+  steam_without_metadata: number;
+  match_rate: number;
+  success_rate: number;
+  games_with_providers: number;
+  last_scrape_at: string;
+  last_scrape_at_display: string;
+  generated_at: string;
+  generated_at_display: string;
+  latest_run_new_game_names: string[];
+  latest_run_updated_game_names: string[];
+}
 
 export interface GameFile {
   name: string;
   size: string;
+}
+
+export interface HosterLink {
+  file_name?: string;
+  direct_link?: string;
+  n?: string; // fallback for old format
+  u?: string; // fallback for old format
 }
 
 export interface SteamData {
@@ -17,6 +40,8 @@ export interface SteamData {
   is_free: boolean;
   pc_requirements: { minimum: string | null; recommended: string | null };
   controller_support: string | null;
+  genres?: { id: string | number; description: string }[];
+  categories?: { id: number; description: string }[];
 }
 
 export interface Game {
@@ -34,11 +59,12 @@ export interface Game {
   files: GameFile[];
   comment: string;
   steam: SteamData;
+  hoster_links?: Record<string, HosterLink[]>;
 }
 
 export type SortId = "az" | "za" | "newest" | "oldest" | "largest" | "smallest";
 
-/* ── Slug ── */
+/* ── Search/Find ── */
 
 export function toSlug(title: string): string {
   return title
@@ -55,17 +81,39 @@ export function findBySlug(games: Game[], slug: string): Game | null {
   return games.find((g) => toSlug(g.title) === slug) ?? null;
 }
 
+export function findByHash(games: Game[], hash: string): Game | null {
+  const h = hash.toLowerCase();
+  // Support full hash or short prefix (min 8 chars to avoid collisions)
+  return games.find((g) => g.unique_hash.toLowerCase().startsWith(h)) ?? null;
+}
+
 /* ── Protocol URL ── */
 
 export function makeProtocolUrl(game: Game): string {
+  const h: Record<string, { n: string; u: string }[]> = {};
+  
+  if (game.hoster_links) {
+    for (const [provider, links] of Object.entries(game.hoster_links)) {
+      h[provider] = links.map((l) => ({
+        n: l.file_name || l.n || "",
+        u: l.direct_link || l.u || "",
+      }));
+    }
+  }
+
   const payload = {
     title: game.title,
     banner: game.steam?.header_image ?? "",
     parts: game.files?.length ?? 1,
     fileSize: game.fileSize,
     magnet: game.magnet,
+    hash: game.unique_hash, // Full info hash
+    h: Object.keys(h).length > 0 ? h : undefined,
   };
-  return `gaming-rumble://${btoa(JSON.stringify(payload))}`;
+
+  const json = JSON.stringify(payload);
+  const b64 = btoa(unescape(encodeURIComponent(json)));
+  return `gaming-rumble://${b64}`;
 }
 
 /* ── Encode game as zlib+base64 for /?data= deep-link URL ── */

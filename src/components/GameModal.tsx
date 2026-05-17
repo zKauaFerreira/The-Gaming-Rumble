@@ -1,7 +1,14 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { type Game } from "./GameCatalog";
 import { makeProtocolUrl, toSlug, getGameDate } from "@/lib/games";
 import translationsData from "@/lib/translations.json";
+
+function ensureProtocol(url: string) {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith("//")) return `https:${url}`;
+  return `https://${url}`;
+}
 
 export function GameModal({ game, onClose }: { game: Game; onClose: () => void }) {
   const [closing, setClosing] = useState(false);
@@ -85,6 +92,11 @@ export function GameModal({ game, onClose }: { game: Game; onClose: () => void }
               <Chip icon={<FolderIcon className="w-3.5 h-3.5" />}>
                 {game.files?.length ?? 1} arquivo{(game.files?.length ?? 1) !== 1 ? "s" : ""}
               </Chip>
+              {game.hoster_links && Object.keys(game.hoster_links).length > 0 && (
+                <Chip icon={<LinkIcon className="w-3.5 h-3.5" />}>
+                  {Object.keys(game.hoster_links).length} provider{Object.keys(game.hoster_links).length !== 1 ? "s" : ""}
+                </Chip>
+              )}
               {game.steam?.price_brl && (
                 <Chip icon={<TagIcon className="w-3.5 h-3.5" />} highlight>
                   {game.steam.is_free ? "Grátis" : game.steam.price_brl}
@@ -96,6 +108,14 @@ export function GameModal({ game, onClose }: { game: Game; onClose: () => void }
                 </Chip>
               )}
             </div>
+
+            {/* Tags (Genres + Categories) - Collapsible & Subtle */}
+            {(game.steam?.genres || game.steam?.categories) && (
+              <TagList
+                genres={game.steam.genres || []}
+                categories={game.steam.categories || []}
+              />
+            )}
           </div>
 
           {/* Description */}
@@ -132,8 +152,9 @@ export function GameModal({ game, onClose }: { game: Game; onClose: () => void }
           {/* Files */}
           {game.files?.length > 0 && (
             <Section title="Arquivos incluídos">
-              <div className="space-y-1">
-                {game.files.map((f, i) => (
+              <CollapsibleList
+                items={game.files}
+                renderItem={(f, i) => (
                   <div
                     key={i}
                     className="flex justify-between text-xs bg-secondary/30 rounded-lg px-3 py-2"
@@ -141,8 +162,22 @@ export function GameModal({ game, onClose }: { game: Game; onClose: () => void }
                     <span className="text-muted-foreground truncate mr-4">{f.name}</span>
                     <span className="shrink-0 font-medium">{f.size}</span>
                   </div>
-                ))}
-              </div>
+                )}
+              />
+            </Section>
+          )}
+
+          {/* Hoster Links */}
+          {game.hoster_links && Object.keys(game.hoster_links).length > 0 && (
+            <Section title="Links de Download">
+              <CollapsibleList
+                items={Object.entries(game.hoster_links)}
+                initialCount={6}
+                containerClassName="grid grid-cols-1 sm:grid-cols-2 gap-2 items-start"
+                renderItem={([hoster, links]) => (
+                  <HosterSection key={hoster} hoster={hoster} links={links} />
+                )}
+              />
             </Section>
           )}
 
@@ -173,6 +208,123 @@ export function GameModal({ game, onClose }: { game: Game; onClose: () => void }
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Collapsible Helpers ── */
+
+function TagList({
+  genres,
+  categories,
+}: {
+  genres: { id: string | number; description: string }[];
+  categories: { id: number; description: string }[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const allTags = useMemo(() => {
+    return [
+      ...genres.map((g) => ({ ...g, type: "genre" })),
+      ...categories.map((c) => ({ ...c, type: "category" })),
+    ];
+  }, [genres, categories]);
+
+  const initialCount = 8;
+  const showButton = allTags.length > initialCount;
+  const visibleTags = expanded ? allTags : allTags.slice(0, initialCount);
+
+  return (
+    <div className="mt-3">
+      <div className="flex flex-wrap gap-1">
+        {visibleTags.map((tag) => (
+          <span
+            key={`${tag.type}-${tag.id}`}
+            className={`text-[9px] px-1.5 py-0.5 rounded-md border transition-colors ${
+              tag.type === "genre"
+                ? "bg-secondary/20 text-muted-foreground/80 border-border/30"
+                : "bg-primary/5 text-primary/60 border-primary/10"
+            }`}
+          >
+            {tag.description}
+          </span>
+        ))}
+        {showButton && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-[9px] px-1.5 py-0.5 rounded-md bg-secondary/40 text-muted-foreground hover:bg-secondary/60 transition-colors border border-border/40 font-medium"
+          >
+            {expanded ? "Menos" : `+${allTags.length - initialCount}`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CollapsibleList<T>({
+  items,
+  renderItem,
+  initialCount = 5,
+}: {
+  items: T[];
+  renderItem: (item: T, index: number) => React.ReactNode;
+  initialCount?: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const showButton = items.length > initialCount;
+  const visibleItems = expanded ? items : items.slice(0, initialCount);
+
+  return (
+    <div className="space-y-1">
+      {visibleItems.map(renderItem)}
+      {showButton && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full py-2 text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary/80 transition-colors flex items-center justify-center gap-1.5 bg-primary/5 rounded-lg border border-primary/10 mt-1"
+        >
+          {expanded ? "Ver menos" : `Ver mais (${items.length - initialCount})`}
+          <ChevronDownIcon className={`w-3 h-3 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function HosterSection({ hoster, links }: { hoster: string; links: any[] }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="space-y-1 bg-secondary/20 rounded-xl p-1.5 border border-border/40">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-secondary/40 rounded-lg transition-colors group"
+      >
+        <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-tighter group-hover:text-foreground transition-colors">
+          {hoster} <span className="ml-1 opacity-50">({links.length})</span>
+        </span>
+        <ChevronDownIcon className={`w-3 h-3 text-muted-foreground/50 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+      </button>
+      
+      {isExpanded && (
+        <div className="space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
+          <CollapsibleList
+            items={links}
+            renderItem={(link, i) => (
+              <a
+                key={i}
+                href={ensureProtocol(link.direct_link || link.u)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-2 bg-secondary/40 hover:bg-secondary/60 border border-border/50 rounded-lg text-xs transition-colors group"
+              >
+                <LinkIcon className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="truncate flex-1">{link.file_name || link.n || `Link ${i + 1}`}</span>
+                <ExternalIcon className="w-3 h-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
+            )}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -347,6 +499,30 @@ function CheckIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+    </svg>
+  );
+}
+
+function LinkIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+    </svg>
+  );
+}
+
+function ExternalIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
     </svg>
   );
 }

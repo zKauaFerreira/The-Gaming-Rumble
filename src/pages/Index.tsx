@@ -1,7 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Navigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { unzlibSync } from "fflate";
 import icon from "@/assets/icon.png";
+import { GAMES_API, findByHash, findBySlug, Game } from "@/lib/games";
 
 type PageState = "loading" | "opened" | "fallback" | "error" | "invalid-payload";
 
@@ -23,41 +25,39 @@ const SHORT_TO_FULL: Record<string, keyof GameData> = {
 
 function decodeData(encoded: string): GameData | null {
   try {
-    // 1. Base64 url-safe → bytes
     const b64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
     const binaryStr = atob(b64);
     const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
-    }
-
-    // 2. Decompress zlib
+    for (let i = 0; i < binaryStr.length; i++) { bytes[i] = binaryStr.charCodeAt(i); }
     const decompressed = unzlibSync(bytes);
-
-    // 3. JSON parse
     const str = new TextDecoder().decode(decompressed);
     const raw = JSON.parse(str);
-
     if (typeof raw !== "object" || raw === null) return null;
-
-    // 4. Map short keys to full keys
     const data: Record<string, unknown> = {};
     for (const [short, full] of Object.entries(SHORT_TO_FULL)) {
       if (!(short in raw) || raw[short] === undefined || raw[short] === "") return null;
       data[full] = raw[short];
     }
-
     return data as unknown as GameData;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 const Index = () => {
   const [state, setState] = useState<PageState>("loading");
   const [protocolUrl, setProtocolUrl] = useState<string>("");
   const [gameData, setGameData] = useState<GameData | null>(null);
+  const [enrichedGame, setEnrichedGame] = useState<Game | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const { data: games, isLoading: gamesLoading } = useQuery({
+    queryKey: ["games"],
+    queryFn: async () => {
+      const r = await fetch(GAMES_API);
+      if (!r.ok) throw new Error("Failed to fetch games");
+      const json = await r.json();
+      return json.downloads as Game[];
+    },
+  });
 
   const tryOpenProtocol = useCallback((url: string) => {
     window.location.href = url;
@@ -79,6 +79,13 @@ const Index = () => {
     }
 
     setGameData(decoded);
+
+    // Try to find enriched data in database
+    if (games) {
+      const hash = decoded.magnet.match(/xt=urn:btih:([^&]+)/i)?.[1];
+      const found = (hash ? findByHash(games, hash) : null) || findBySlug(games, decoded.title);
+      if (found) setEnrichedGame(found);
+    }
 
     // Rebuild full JSON → base64 for protocol
     const fullJson = JSON.stringify(decoded);
@@ -113,7 +120,7 @@ const Index = () => {
       window.removeEventListener("blur", handleBlur);
       clearTimeout(fallbackTimer);
     };
-  }, [tryOpenProtocol]);
+  }, [tryOpenProtocol, games]);
 
   // Auto-close tab after 5s on success
   useEffect(() => {
@@ -130,12 +137,8 @@ const Index = () => {
     });
   }, [gameData]);
 
-  // No data param → redirect to catalog
-  if (state === "error") {
-    return <Navigate to="/page/1" replace />;
-  }
-
-  // Error: invalid payload
+  if (state === "error") return <Navigate to="/page/1" replace />;
+  
   if (state === "invalid-payload") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -147,7 +150,7 @@ const Index = () => {
             </svg>
           </div>
           <h1 className="text-2xl font-bold mb-2">Jogo não encontrado</h1>
-          <p className="text-muted-foreground mb-8">Os dados do jogo estão incompletos ou corrompidos. Solicite um novo link.</p>
+          <p className="text-muted-foreground mb-8">Os dados do jogo estão incompletos ou corrompidos.</p>
           <button onClick={() => window.history.back()} className="px-6 py-3 rounded-xl bg-secondary text-secondary-foreground font-medium hover:bg-secondary/80 transition-colors">← Voltar</button>
         </div>
       </div>
@@ -157,12 +160,10 @@ const Index = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className={`animate-fade-in-up bg-card border border-border rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden`}>
-
-        {/* Banner — always visible when gameData exists */}
         {gameData && (
           <div className="relative w-full">
             <img
-              src={gameData.banner}
+              src={enrichedGame?.steam?.header_image || gameData.banner}
               alt={gameData.title}
               className="w-full h-40 md:h-48 object-cover"
               onError={(e) => {
@@ -170,7 +171,6 @@ const Index = () => {
                 (e.target as HTMLImageElement).parentElement?.classList.add("bg-gradient-to-br", "from-primary/20", "to-background");
               }}
             />
-            {/* Overlay gradient + title */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
               <div className="absolute bottom-3 left-4 right-4">
                 <h1 className="text-lg md:text-xl font-bold text-white drop-shadow-lg leading-tight">{gameData.title}</h1>
@@ -180,25 +180,49 @@ const Index = () => {
         )}
 
         <div className="p-6 md:p-8">
-          {/* Size & Files — centered */}
           {gameData && (
-            <div className="flex justify-center gap-6 text-sm text-muted-foreground mb-5">
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                </svg>
-                {gameData.fileSize}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                </svg>
-                {gameData.parts} {gameData.parts === 1 ? "arquivo" : "arquivos"}
-              </span>
-            </div>
+            <>
+              <div className="flex justify-center gap-6 text-sm text-muted-foreground mb-4">
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                  </svg>
+                  {gameData.fileSize}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                  {gameData.parts} {gameData.parts === 1 ? "arquivo" : "arquivos"}
+                </span>
+                {enrichedGame?.hoster_links && Object.keys(enrichedGame.hoster_links).length > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                    </svg>
+                    {Object.keys(enrichedGame.hoster_links).length} {Object.keys(enrichedGame.hoster_links).length === 1 ? "provider" : "providers"}
+                  </span>
+                )}
+              </div>
+
+              {/* Tags (Genres + Categories) - Shown if enriched data found */}
+              {(enrichedGame?.steam?.genres || enrichedGame?.steam?.categories) && (
+                <div className="flex flex-wrap justify-center gap-1 mb-6">
+                  {enrichedGame.steam.genres?.slice(0, 4).map((g) => (
+                    <span key={g.id} className="text-[9px] px-1.5 py-0.5 rounded-md bg-secondary/30 text-muted-foreground border border-border/30">
+                      {g.description}
+                    </span>
+                  ))}
+                  {enrichedGame.steam.categories?.slice(0, 4).map((c) => (
+                    <span key={c.id} className="text-[9px] px-1.5 py-0.5 rounded-md bg-primary/5 text-primary/60 border border-primary/10">
+                      {c.description}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
-          {/* Loading */}
           {state === "loading" && (
             <div className="text-center">
               <div className="w-10 h-10 mx-auto mb-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin-slow" />
@@ -207,7 +231,6 @@ const Index = () => {
             </div>
           )}
 
-          {/* Opened */}
           {state === "opened" && (
             <div className="text-center">
               <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center" style={{ backgroundColor: "hsl(var(--success) / 0.15)" }}>
@@ -220,7 +243,6 @@ const Index = () => {
             </div>
           )}
 
-          {/* Fallback buttons */}
           {state === "fallback" && (
             <div className="space-y-3">
               <button
